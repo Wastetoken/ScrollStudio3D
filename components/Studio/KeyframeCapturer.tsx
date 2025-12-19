@@ -5,17 +5,20 @@ import * as THREE from 'three';
 
 export const KeyframeCapturer: React.FC = () => {
   const { camera, scene } = useThree();
-  const { addKeyframe, config } = useStore();
+  const { addKeyframe, config, modelUrl } = useStore();
 
   useEffect(() => {
     const handleCapture = (e: any) => {
+      if (!modelUrl) return;
+      
       const progress = e.detail.progress;
       
       // Attempt to locate OrbitControls and extract its target
       let target: [number, number, number] = [0, 0, 0];
       
       scene.traverse((obj: any) => {
-        if (obj.isOrbitControls || (obj.target && obj.domElement)) {
+        // More robust check for orbit controls or objects with targets
+        if (obj.isOrbitControls && obj.target) {
           target = [obj.target.x, obj.target.y, obj.target.z];
         }
       });
@@ -29,12 +32,11 @@ export const KeyframeCapturer: React.FC = () => {
       };
 
       addKeyframe(newKeyframe);
-      console.log('Captured Keyframe:', newKeyframe);
     };
 
     window.addEventListener('capture-keyframe', handleCapture);
     return () => window.removeEventListener('capture-keyframe', handleCapture);
-  }, [camera, scene, addKeyframe, config.modelRotation]);
+  }, [camera, scene, addKeyframe, config.modelRotation, modelUrl]);
 
   return null;
 };

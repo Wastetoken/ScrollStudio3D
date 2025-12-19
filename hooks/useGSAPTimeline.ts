@@ -11,11 +11,20 @@ export const useGSAPTimeline = (
   lookAtProxy: THREE.Vector3,
   modelRef: React.RefObject<THREE.Group>
 ) => {
-  const { keyframes, mode, currentProgress, setCurrentProgress } = useStore();
+  const { keyframes, mode, currentProgress, setCurrentProgress, modelUrl } = useStore();
   const timelineRef = useRef<gsap.core.Timeline | null>(null);
 
   useEffect(() => {
-    if (!camera || keyframes.length < 1) return;
+    // Immediate cleanup of any existing triggers to prevent collision
+    ScrollTrigger.getAll().forEach(t => t.kill());
+
+    if (!camera || keyframes.length < 1 || !modelUrl) {
+      if (timelineRef.current) {
+        timelineRef.current.kill();
+        timelineRef.current = null;
+      }
+      return;
+    }
 
     const ctx = gsap.context(() => {
       const tl = gsap.timeline({
@@ -34,15 +43,14 @@ export const useGSAPTimeline = (
           start: 'top top',
           end: 'bottom bottom',
           scrub: 1,
+          invalidateOnRefresh: true,
         });
       }
 
       const sorted = [...keyframes].sort((a, b) => a.progress - b.progress);
 
-      // --- Implicit Start Frame Handling ---
-      // If the first frame isn't at 0, treat it as the state from 0 to its progress point
+      // Initialize first frame
       const first = sorted[0];
-      
       tl.set(camera.position, { x: first.position[0], y: first.position[1], z: first.position[2] }, 0);
       tl.set(lookAtProxy, { x: first.target[0], y: first.target[1], z: first.target[2] }, 0);
       
@@ -50,15 +58,10 @@ export const useGSAPTimeline = (
         tl.set(modelRef.current.rotation, { x: first.rotation[0], y: first.rotation[1], z: first.rotation[2] }, 0);
       }
 
-      // If first progress > 0, we create a "hold" from 0 to that point
-      // (The above .set at 0 handles this visually)
-
-      // Piecewise animation between keyframes
+      // Build sequence
       for (let i = 1; i < sorted.length; i++) {
         const prev = sorted[i - 1];
         const current = sorted[i];
-        
-        // Use normalized duration within the 0-1 timeline
         const duration = current.progress - prev.progress;
         const startTime = prev.progress;
 
@@ -89,13 +92,18 @@ export const useGSAPTimeline = (
         }
       }
 
-      // Handle the case where last progress < 1: GSAP will just hold the state until 1.0 automatically.
-
       timelineRef.current = tl;
     });
 
-    return () => ctx.revert();
-  }, [keyframes, mode, camera, lookAtProxy, modelRef, setCurrentProgress]);
+    return () => {
+      ctx.revert();
+      ScrollTrigger.getAll().forEach(t => t.kill());
+      if (timelineRef.current) {
+        timelineRef.current.kill();
+        timelineRef.current = null;
+      }
+    };
+  }, [keyframes, mode, camera, lookAtProxy, modelRef, setCurrentProgress, modelUrl]);
 
   useEffect(() => {
     if (mode === 'edit' && timelineRef.current) {

@@ -12,18 +12,23 @@ const DEFAULT_CONFIG: SceneConfig = {
   autoRotateSpeed: 1.0
 };
 
-export const useStore = create<StoreState>((set) => ({
+export const useStore = create<StoreState>((set, get) => ({
   modelUrl: null,
   mode: 'edit',
   keyframes: [],
-  config: DEFAULT_CONFIG,
+  config: { ...DEFAULT_CONFIG },
   currentProgress: 0,
   cameraPosition: [5, 5, 5],
   cameraTarget: [0, 0, 0],
 
   setModelUrl: (url) => set((state) => {
-    if (state.modelUrl && state.modelUrl.startsWith('blob:')) {
-      URL.revokeObjectURL(state.modelUrl);
+    // Safely revoke old blob URLs when a new one is set
+    if (url && state.modelUrl && state.modelUrl.startsWith('blob:') && state.modelUrl !== url) {
+      try {
+        URL.revokeObjectURL(state.modelUrl);
+      } catch (e) {
+        console.warn("Cleanup error during URL swap:", e);
+      }
     }
     return { modelUrl: url };
   }),
@@ -55,14 +60,13 @@ export const useStore = create<StoreState>((set) => ({
 
   loadProject: (project) => set({
     config: project.config,
-    keyframes: project.keyframes.sort((a, b) => a.progress - b.progress)
+    keyframes: project.keyframes.sort((a, b) => a.progress - b.progress),
+    mode: 'edit'
   }),
 
-  reset: () => set((state) => {
-    if (state.modelUrl && state.modelUrl.startsWith('blob:')) {
-      URL.revokeObjectURL(state.modelUrl);
-    }
-    return {
+  reset: () => {
+    // Clear state but leave URL revocation for the next upload to prevent unmount race conditions
+    set({
       modelUrl: null,
       mode: 'edit',
       keyframes: [],
@@ -70,6 +74,6 @@ export const useStore = create<StoreState>((set) => ({
       currentProgress: 0,
       cameraPosition: [5, 5, 5],
       cameraTarget: [0, 0, 0]
-    };
-  }),
+    });
+  },
 }));

@@ -1,14 +1,17 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useRef } from 'react';
 import { useStore } from '../../store/useStore';
 
 export const Uploader: React.FC = () => {
   const { setModelUrl, modelUrl } = useStore();
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const onFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       const url = URL.createObjectURL(file);
       setModelUrl(url);
+      // Important: clear the input value so the same file can be chosen again after a reset
+      if (inputRef.current) inputRef.current.value = '';
     }
   }, [setModelUrl]);
 
@@ -39,6 +42,7 @@ export const Uploader: React.FC = () => {
             <i className="fa-solid fa-cloud-arrow-up text-2xl mb-2 group-hover:translate-y-[-2px] transition-transform"></i>
             <span className="text-sm font-bold uppercase tracking-widest">Select Model File</span>
             <input
+              ref={inputRef}
               id="file-upload"
               type="file"
               accept=".glb,.gltf"
