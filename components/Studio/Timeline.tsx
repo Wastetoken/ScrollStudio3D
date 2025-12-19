@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { useStore } from '../../store/useStore';
+import { useStore } from '../../useStore';
 
 export const Timeline: React.FC = () => {
   const { currentProgress, setCurrentProgress, keyframes, mode, modelUrl } = useStore();

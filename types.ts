@@ -8,6 +8,13 @@ export interface Keyframe {
   rotation: Vector3Array; // Model rotation
 }
 
+export interface StorySection {
+  id: string;
+  progress: number;
+  title: string;
+  description: string;
+}
+
 export interface SceneConfig {
   modelScale: number;
   ambientIntensity: number;
@@ -17,6 +24,7 @@ export interface SceneConfig {
   showFloor: boolean;
   autoRotate: boolean;
   autoRotateSpeed: number;
+  backgroundColor: string;
 }
 
 export type EngineMode = 'edit' | 'preview';
@@ -25,16 +33,18 @@ export interface ProjectSchema {
   version: string;
   config: SceneConfig;
   keyframes: Keyframe[];
+  sections: StorySection[];
 }
 
 export interface StoreState {
   modelUrl: string | null;
   mode: EngineMode;
   keyframes: Keyframe[];
+  sections: StorySection[];
   config: SceneConfig;
   currentProgress: number;
-  cameraPosition: Vector3Array; // Real-time camera position bridge
-  cameraTarget: Vector3Array;   // Real-time camera target bridge
+  cameraPosition: Vector3Array;
+  cameraTarget: Vector3Array;
   
   // Actions
   setModelUrl: (url: string | null) => void;
@@ -42,6 +52,9 @@ export interface StoreState {
   addKeyframe: (kf: Keyframe) => void;
   removeKeyframe: (id: string) => void;
   updateKeyframe: (id: string, updates: Partial<Keyframe>) => void;
+  addSection: (section: StorySection) => void;
+  removeSection: (id: string) => void;
+  updateSection: (id: string, updates: Partial<StorySection>) => void;
   setConfig: (config: Partial<SceneConfig>) => void;
   setCurrentProgress: (progress: number) => void;
   setCameraPosition: (pos: Vector3Array) => void;

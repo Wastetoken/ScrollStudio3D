@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { useThree } from '@react-three/fiber';
-import { useStore } from '../../store/useStore';
+import { useStore } from '../../useStore';
 import * as THREE from 'three';
 
 export const KeyframeCapturer: React.FC = () => {

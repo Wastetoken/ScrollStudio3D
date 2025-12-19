@@ -1,5 +1,5 @@
 import React, { useCallback, useRef } from 'react';
-import { useStore } from '../../store/useStore';
+import { useStore } from '../useStore';
 
 export const Uploader: React.FC = () => {
   const { setModelUrl, modelUrl } = useStore();

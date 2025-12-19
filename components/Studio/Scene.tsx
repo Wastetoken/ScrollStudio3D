@@ -2,7 +2,7 @@ import React, { useRef, useMemo, useEffect } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { useGLTF, OrbitControls, PerspectiveCamera, ContactShadows } from '@react-three/drei';
 import * as THREE from 'three';
-import { useStore } from '../../store/useStore';
+import { useStore } from '../../useStore';
 import { useGSAPTimeline } from '../../hooks/useGSAPTimeline';
 
 interface ModelProps {

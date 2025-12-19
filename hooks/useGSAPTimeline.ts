@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { useStore } from '../store/useStore';
+import { useStore } from '../useStore';
 import * as THREE from 'three';
 
 gsap.registerPlugin(ScrollTrigger);
