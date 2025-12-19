@@ -17,7 +17,7 @@ const DEFAULT_SECTIONS: StorySection[] = [
   { id: 'start', progress: 0, title: 'NEW PROJECT', description: 'Scroll down to begin your journey through this 3D landscape.' }
 ];
 
-export const useStore = create<StoreState>((set, get) => ({
+export const useStore = create<StoreState>((set) => ({
   modelUrl: null,
   mode: 'edit',
   keyframes: [],

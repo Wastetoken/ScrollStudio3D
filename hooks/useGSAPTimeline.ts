@@ -42,7 +42,7 @@ export const useGSAPTimeline = (
           trigger: 'body',
           start: 'top top',
           end: 'bottom bottom',
-          scrub: 1,
+          scrub: 0.5, // Smoother follow
           invalidateOnRefresh: true,
         });
       }
@@ -69,7 +69,7 @@ export const useGSAPTimeline = (
           x: current.position[0],
           y: current.position[1],
           z: current.position[2],
-          ease: 'power1.inOut',
+          ease: 'power2.inOut',
           duration: duration,
         }, startTime);
 
@@ -77,7 +77,7 @@ export const useGSAPTimeline = (
           x: current.target[0],
           y: current.target[1],
           z: current.target[2],
-          ease: 'power1.inOut',
+          ease: 'power2.inOut',
           duration: duration,
         }, startTime);
 
@@ -86,7 +86,7 @@ export const useGSAPTimeline = (
             x: current.rotation[0],
             y: current.rotation[1],
             z: current.rotation[2],
-            ease: 'power1.inOut',
+            ease: 'power2.inOut',
             duration: duration,
           }, startTime);
         }

@@ -1,6 +1,7 @@
+/// <reference types="@react-three/fiber" />
 import React, { useRef, useMemo, useEffect } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { useGLTF, OrbitControls, PerspectiveCamera, ContactShadows } from '@react-three/drei';
+import { useGLTF, OrbitControls, PerspectiveCamera, ContactShadows, Environment } from '@react-three/drei';
 import * as THREE from 'three';
 import { useStore } from '../../useStore';
 import { useGSAPTimeline } from '../../hooks/useGSAPTimeline';
@@ -24,6 +25,7 @@ const ModelPrimitive: React.FC<ModelProps> = ({ url, modelRef }) => {
     }
   });
 
+  // Fix: Intrinsic elements like 'group' and 'primitive' require the R3F JSX namespace to be correctly loaded via triple-slash directive
   return (
     <group 
       ref={modelRef} 
@@ -51,7 +53,6 @@ const CameraSync: React.FC<{ cameraRef: React.RefObject<THREE.PerspectiveCamera>
   useFrame(() => {
     if (!cameraRef.current || !modelUrl || mode !== 'edit') return;
 
-    // 1. Sync store -> camera
     const posChanged = cameraPosition.some((v, i) => Math.abs(v - lastStorePos.current[i]) > 0.0001);
     const targetChanged = cameraTarget.some((v, i) => Math.abs(v - lastStoreTarget.current[i]) > 0.0001);
 
@@ -65,7 +66,6 @@ const CameraSync: React.FC<{ cameraRef: React.RefObject<THREE.PerspectiveCamera>
       lastStoreTarget.current = cameraTarget;
     }
 
-    // 2. Sync camera -> store
     if (!posChanged && !targetChanged) {
       const { x, y, z } = cameraRef.current.position;
       if (Math.abs(x - cameraPosition[0]) > 0.005 || Math.abs(y - cameraPosition[1]) > 0.005 || Math.abs(z - cameraPosition[2]) > 0.005) {
@@ -87,7 +87,7 @@ const CameraSync: React.FC<{ cameraRef: React.RefObject<THREE.PerspectiveCamera>
 
   return mode === 'edit' && modelUrl ? (
     <OrbitControls 
-      key={modelUrl} // Force reset of controls when the model or session changes
+      key={modelUrl} 
       ref={controlsRef}
       makeDefault 
       enableDamping 
@@ -106,17 +106,8 @@ export const Scene: React.FC = () => {
 
   useFrame((state, delta) => {
     if (!modelUrl) return;
-
     if (mode === 'preview' && cameraRef.current) {
       cameraRef.current.lookAt(lookAtProxy);
-      
-      if (config.autoRotate) {
-        const speed = config.autoRotateSpeed * 0.1 * delta;
-        const x = cameraRef.current.position.x;
-        const z = cameraRef.current.position.z;
-        cameraRef.current.position.x = x * Math.cos(speed) - z * Math.sin(speed);
-        cameraRef.current.position.z = x * Math.sin(speed) + z * Math.cos(speed);
-      }
     }
   });
 
@@ -126,19 +117,22 @@ export const Scene: React.FC = () => {
         ref={cameraRef} 
         makeDefault 
         position={[5, 5, 5]} 
-        fov={45} 
+        fov={35} 
       />
       
       <CameraSync cameraRef={cameraRef} />
 
+      <Environment preset="city" intensity={0.5} />
+      
+      {/* Fix: These intrinsic light elements are now recognized after adding the fiber reference */}
       <ambientLight intensity={config.ambientIntensity} />
-      <hemisphereLight intensity={0.5} groundColor="#000000" color="#ffffff" />
+      <hemisphereLight intensity={0.8} groundColor="#000000" color="#ffffff" />
       <directionalLight 
-        position={[10, 10, 5]} 
+        position={[10, 10, 10]} 
         intensity={config.directionalIntensity} 
         castShadow 
       />
-      <pointLight position={[-10, 5, -10]} intensity={0.5} color="#ffffff" />
+      <pointLight position={[-10, 5, -10]} intensity={1.5} color="#4444ff" />
 
       {modelUrl && (
         <React.Suspense fallback={null}>
@@ -152,10 +146,11 @@ export const Scene: React.FC = () => {
             position={[0, -1.01, 0]} 
             opacity={0.4} 
             scale={20} 
-            blur={2} 
+            blur={2.5} 
             far={4.5} 
           />
-          <gridHelper args={[20, 20, 0x333333, 0x222222]} position={[0, -1, 0]} />
+          {/* Fix: gridHelper is a valid intrinsic element provided by @react-three/fiber types */}
+          <gridHelper args={[40, 40, 0x222222, 0x111111]} position={[0, -1, 0]} />
         </>
       )}
     </>
