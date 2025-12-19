@@ -10,17 +10,20 @@ import { KeyframeCapturer } from './Studio/KeyframeCapturer';
 const App: React.FC = () => {
   const { mode, modelUrl } = useStore();
 
-  // Sync mode to HTML class for global styling adjustments
   useEffect(() => {
     if (mode === 'preview') {
       document.documentElement.classList.add('preview-mode');
+      document.body.style.overflowY = 'auto';
+      document.body.style.height = 'auto';
     } else {
       document.documentElement.classList.remove('preview-mode');
+      document.body.style.overflowY = 'hidden';
+      document.body.style.height = '100vh';
     }
   }, [mode]);
 
   return (
-    <div className={`w-full h-screen relative bg-[#050505] overflow-hidden ${mode === 'preview' ? 'h-[500vh] overflow-y-auto' : ''}`}>
+    <div className={`w-full min-h-screen relative bg-[#050505] ${mode === 'preview' ? 'h-[500vh]' : 'h-screen overflow-hidden'}`}>
       
       {/* 3D Engine Runtime (Bottom Layer) */}
       <div className="fixed inset-0 z-0">
@@ -38,13 +41,11 @@ const App: React.FC = () => {
       {/* Editor Interface (Middle Layer) */}
       {mode === 'edit' && modelUrl && (
         <div className="relative z-20 w-full h-full pointer-events-none">
-          {/* Controls need auto to be interactive */}
           <div className="pointer-events-auto">
             <Sidebar />
             <Timeline />
           </div>
           
-          {/* Visual Accents */}
           <div className="fixed top-8 right-8 z-40 flex items-center gap-4 pointer-events-auto">
              <div className="glass-panel px-5 py-2.5 rounded-2xl flex items-center gap-3 border-white/5 shadow-2xl">
                 <div className="w-1.5 h-1.5 bg-white rounded-full animate-ping"></div>
@@ -54,7 +55,7 @@ const App: React.FC = () => {
         </div>
       )}
 
-      {/* Preview Scrolling Content (Dynamic Layer) */}
+      {/* Preview Scrolling Content */}
       {mode === 'preview' && (
         <div className="relative z-30 w-full pointer-events-none">
           <div className="h-screen flex items-center justify-center">
@@ -77,7 +78,6 @@ const App: React.FC = () => {
              </div>
           </div>
           
-          {/* Close Preview UI */}
           <div className="fixed top-8 left-8 z-50 pointer-events-auto">
              <button 
               onClick={() => useStore.getState().setMode('edit')}
@@ -89,7 +89,6 @@ const App: React.FC = () => {
         </div>
       )}
       
-      {/* Global CSS for animations */}
       <style>{`
         @keyframes fadeIn {
           from { opacity: 0; transform: translateY(40px); }
@@ -107,9 +106,6 @@ const App: React.FC = () => {
         .custom-scrollbar::-webkit-scrollbar-thumb {
           background: rgba(255, 255, 255, 0.1);
           border-radius: 10px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: rgba(255, 255, 255, 0.5);
         }
       `}</style>
     </div>
