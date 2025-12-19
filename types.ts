@@ -15,6 +15,8 @@ export interface SceneConfig {
   modelPosition: Vector3Array;
   modelRotation: Vector3Array;
   showFloor: boolean;
+  autoRotate: boolean;
+  autoRotateSpeed: number;
 }
 
 export type EngineMode = 'edit' | 'preview';
@@ -31,6 +33,8 @@ export interface StoreState {
   keyframes: Keyframe[];
   config: SceneConfig;
   currentProgress: number;
+  cameraPosition: Vector3Array; // Real-time camera position bridge
+  cameraTarget: Vector3Array;   // Real-time camera target bridge
   
   // Actions
   setModelUrl: (url: string | null) => void;
@@ -40,6 +44,8 @@ export interface StoreState {
   updateKeyframe: (id: string, updates: Partial<Keyframe>) => void;
   setConfig: (config: Partial<SceneConfig>) => void;
   setCurrentProgress: (progress: number) => void;
+  setCameraPosition: (pos: Vector3Array) => void;
+  setCameraTarget: (target: Vector3Array) => void;
   loadProject: (project: ProjectSchema) => void;
   reset: () => void;
 }

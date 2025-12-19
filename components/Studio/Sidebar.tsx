@@ -1,9 +1,25 @@
 import React, { useRef } from 'react';
 import { useStore } from '../../store/useStore';
-import { Keyframe, ProjectSchema, Vector3Array } from '../../types';
+import { ProjectSchema, Vector3Array } from '../../types';
 
 export const Sidebar: React.FC = () => {
-  const { config, setConfig, keyframes, removeKeyframe, mode, setMode, currentProgress, modelUrl, loadProject, reset } = useStore();
+  const { 
+    config, 
+    setConfig, 
+    keyframes, 
+    removeKeyframe, 
+    mode, 
+    setMode, 
+    currentProgress, 
+    modelUrl, 
+    loadProject, 
+    reset,
+    cameraPosition,
+    setCameraPosition,
+    cameraTarget,
+    setCameraTarget
+  } = useStore();
+  
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   if (!modelUrl) return null;
@@ -46,15 +62,27 @@ export const Sidebar: React.FC = () => {
   };
 
   const handleStartOver = () => {
-    if (window.confirm('Are you sure you want to start over? All unsaved keyframes will be lost.')) {
+    if (window.confirm('Are you sure you want to start over? This will remove all keyframes and return to the uploader.')) {
       reset();
     }
   };
 
-  const updateRotation = (index: number, val: number) => {
+  const updateModelRotation = (index: number, val: number) => {
     const newRot = [...config.modelRotation] as Vector3Array;
     newRot[index] = val;
     setConfig({ modelRotation: newRot });
+  };
+
+  const updateCameraPosUI = (index: number, val: number) => {
+    const newPos = [...cameraPosition] as Vector3Array;
+    newPos[index] = val;
+    setCameraPosition(newPos);
+  };
+
+  const updateCameraTargetUI = (index: number, val: number) => {
+    const newTarget = [...cameraTarget] as Vector3Array;
+    newTarget[index] = val;
+    setCameraTarget(newTarget);
   };
 
   return (
@@ -95,22 +123,81 @@ export const Sidebar: React.FC = () => {
         
         <div className="space-y-6">
           {/* Toggles */}
-          <div className="flex items-center justify-between">
-            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Floor Visibility</label>
-            <button
-              onClick={() => setConfig({ showFloor: !config.showFloor })}
-              className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest transition-all border ${
-                config.showFloor 
-                  ? 'bg-white text-black border-white shadow-lg shadow-white/10' 
-                  : 'bg-transparent text-gray-500 border-white/10 hover:border-white/20'
-              }`}
-            >
-              {config.showFloor ? 'ON' : 'OFF'}
-            </button>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Floor Visibility</label>
+              <button
+                onClick={() => setConfig({ showFloor: !config.showFloor })}
+                className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest transition-all border ${
+                  config.showFloor 
+                    ? 'bg-white text-black border-white shadow-lg shadow-white/10' 
+                    : 'bg-transparent text-gray-500 border-white/10 hover:border-white/20'
+                }`}
+              >
+                {config.showFloor ? 'ON' : 'OFF'}
+              </button>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Auto Orbit</label>
+              <button
+                onClick={() => setConfig({ autoRotate: !config.autoRotate })}
+                className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest transition-all border ${
+                  config.autoRotate 
+                    ? 'bg-white text-black border-white shadow-lg shadow-white/10' 
+                    : 'bg-transparent text-gray-500 border-white/10 hover:border-white/20'
+                }`}
+              >
+                {config.autoRotate ? 'ON' : 'OFF'}
+              </button>
+            </div>
+          </div>
+
+          {/* Camera View Controls */}
+          <div className="border-t border-white/5 pt-6 space-y-6">
+            <h4 className="text-[9px] font-bold text-white uppercase tracking-widest opacity-50">Camera Position</h4>
+            {['X', 'Y', 'Z'].map((label, i) => (
+              <div key={`pos-${label}`} className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{label}</label>
+                  <span className="text-[10px] font-mono text-white">{cameraPosition[i].toFixed(1)}</span>
+                </div>
+                <input
+                  type="range"
+                  min="-20"
+                  max="20"
+                  step="0.1"
+                  value={cameraPosition[i]}
+                  onChange={(e) => updateCameraPosUI(i, parseFloat(e.target.value))}
+                  className="w-full h-1 bg-gray-800 rounded-lg appearance-none cursor-pointer accent-white"
+                />
+              </div>
+            ))}
           </div>
 
           <div className="border-t border-white/5 pt-6 space-y-6">
-            <h4 className="text-[9px] font-bold text-white uppercase tracking-widest opacity-50">Transformation</h4>
+            <h4 className="text-[9px] font-bold text-white uppercase tracking-widest opacity-50">Camera Target</h4>
+            {['X', 'Y', 'Z'].map((label, i) => (
+              <div key={`target-${label}`} className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{label}</label>
+                  <span className="text-[10px] font-mono text-white">{cameraTarget[i].toFixed(1)}</span>
+                </div>
+                <input
+                  type="range"
+                  min="-10"
+                  max="10"
+                  step="0.1"
+                  value={cameraTarget[i]}
+                  onChange={(e) => updateCameraTargetUI(i, parseFloat(e.target.value))}
+                  className="w-full h-1 bg-gray-800 rounded-lg appearance-none cursor-pointer accent-white"
+                />
+              </div>
+            ))}
+          </div>
+
+          <div className="border-t border-white/5 pt-6 space-y-6">
+            <h4 className="text-[9px] font-bold text-white uppercase tracking-widest opacity-50">Model Setup</h4>
             
             <div className="space-y-3">
               <div className="flex justify-between items-center">
@@ -129,11 +216,11 @@ export const Sidebar: React.FC = () => {
             </div>
 
             <div className="space-y-4">
-              {['Rotation X', 'Rotation Y', 'Rotation Z'].map((label, i) => (
-                <div key={label} className="space-y-3">
+              {['Rot X', 'Rot Y', 'Rot Z'].map((label, i) => (
+                <div key={label} className="space-y-2">
                   <div className="flex justify-between items-center">
                     <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{label}</label>
-                    <span className="text-[10px] font-mono text-white">{config.modelRotation[i].toFixed(2)}rad</span>
+                    <span className="text-[10px] font-mono text-white">{config.modelRotation[i].toFixed(2)}r</span>
                   </div>
                   <input
                     type="range"
@@ -141,61 +228,27 @@ export const Sidebar: React.FC = () => {
                     max={Math.PI}
                     step={0.01}
                     value={config.modelRotation[i]}
-                    onChange={(e) => updateRotation(i, parseFloat(e.target.value))}
+                    onChange={(e) => updateModelRotation(i, parseFloat(e.target.value))}
                     className="w-full h-1 bg-gray-800 rounded-lg appearance-none cursor-pointer accent-white"
                   />
                 </div>
               ))}
             </div>
           </div>
-
-          <div className="border-t border-white/5 pt-6 space-y-6">
-            <h4 className="text-[9px] font-bold text-white uppercase tracking-widest opacity-50">Lighting</h4>
-            <div className="space-y-3">
-              <div className="flex justify-between items-center">
-                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Ambient</label>
-                <span className="text-[10px] font-mono text-white">{config.ambientIntensity.toFixed(1)}</span>
-              </div>
-              <input
-                type="range"
-                min="0"
-                max="2"
-                step="0.05"
-                value={config.ambientIntensity}
-                onChange={(e) => setConfig({ ambientIntensity: parseFloat(e.target.value) })}
-                className="w-full h-1 bg-gray-800 rounded-lg appearance-none cursor-pointer accent-white"
-              />
-            </div>
-            <div className="space-y-3">
-              <div className="flex justify-between items-center">
-                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Directional</label>
-                <span className="text-[10px] font-mono text-white">{config.directionalIntensity.toFixed(1)}</span>
-              </div>
-              <input
-                type="range"
-                min="0"
-                max="5"
-                step="0.1"
-                value={config.directionalIntensity}
-                onChange={(e) => setConfig({ directionalIntensity: parseFloat(e.target.value) })}
-                className="w-full h-1 bg-gray-800 rounded-lg appearance-none cursor-pointer accent-white"
-              />
-            </div>
-          </div>
         </div>
       </div>
 
-      {/* Timeline Section */}
+      {/* Timeline List Section */}
       <div className="glass-panel p-6 rounded-2xl flex-1 overflow-hidden flex flex-col pointer-events-auto shadow-2xl">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-white">Timeline</h3>
-          <span className="text-[10px] font-mono text-gray-500">{keyframes.length} PTS</span>
+          <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-white">Captured Sequence</h3>
+          <span className="text-[10px] font-mono text-gray-500">{keyframes.length}</span>
         </div>
         
         <div className="overflow-y-auto pr-2 custom-scrollbar flex-1 space-y-2">
           {keyframes.length === 0 ? (
             <div className="text-[10px] text-gray-500 text-center py-10 bg-black/40 rounded-xl border border-white/5 border-dashed uppercase tracking-widest leading-loose">
-              No points captured.<br/>Navigate and click camera<br/>to add keyframes.
+              Timeline is empty.<br/>Capture viewpoints below.
             </div>
           ) : (
             keyframes.map((kf) => (
@@ -208,9 +261,9 @@ export const Sidebar: React.FC = () => {
                 }`}
               >
                 <div>
-                  <div className="text-[10px] font-black text-white">{(kf.progress * 100).toFixed(0)}%</div>
+                  <div className="text-[10px] font-black text-white">POINT AT {(kf.progress * 100).toFixed(0)}%</div>
                   <div className="text-[8px] text-gray-500 font-mono tracking-tighter">
-                    Pos: {kf.position.map(p => p.toFixed(1)).join(', ')}
+                    {kf.position.map(p => p.toFixed(1)).join(', ')}
                   </div>
                 </div>
                 <button 
@@ -229,13 +282,13 @@ export const Sidebar: React.FC = () => {
             onClick={() => fileInputRef.current?.click()}
             className="py-3 bg-white/5 hover:bg-white/10 text-white text-[10px] font-black uppercase tracking-widest rounded-xl transition-all border border-white/10"
           >
-            Import
+            Import JSON
           </button>
           <button 
             onClick={exportProject}
             className="py-3 bg-white text-black hover:bg-gray-200 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all shadow-xl active:scale-[0.98]"
           >
-            Export
+            Export JSON
           </button>
         </div>
         <input 

@@ -1,11 +1,11 @@
 import React, { Suspense, useEffect } from 'react';
 import { Canvas } from '@react-three/fiber';
-import { useStore } from './store/useStore';
-import { Scene } from './components/Studio/Scene';
-import { Sidebar } from './components/Studio/Sidebar';
-import { Timeline } from './components/Studio/Timeline';
-import { Uploader } from './components/Studio/Uploader';
-import { KeyframeCapturer } from './components/Studio/KeyframeCapturer';
+import { useStore } from '../store/useStore';
+import { Scene } from './Studio/Scene';
+import { Sidebar } from './Studio/Sidebar';
+import { Timeline } from './Studio/Timeline';
+import { Uploader } from './Studio/Uploader';
+import { KeyframeCapturer } from './Studio/KeyframeCapturer';
 
 const App: React.FC = () => {
   const { mode, modelUrl } = useStore();

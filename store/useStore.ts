@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { StoreState, Keyframe, EngineMode, SceneConfig, ProjectSchema } from '../types';
+import { StoreState, EngineMode, SceneConfig, Vector3Array } from '../types';
 
 const DEFAULT_CONFIG: SceneConfig = {
   modelScale: 1,
@@ -7,7 +7,9 @@ const DEFAULT_CONFIG: SceneConfig = {
   directionalIntensity: 1,
   modelPosition: [0, 0, 0],
   modelRotation: [0, 0, 0],
-  showFloor: true
+  showFloor: true,
+  autoRotate: false,
+  autoRotateSpeed: 1.0
 };
 
 export const useStore = create<StoreState>((set) => ({
@@ -16,6 +18,8 @@ export const useStore = create<StoreState>((set) => ({
   keyframes: [],
   config: DEFAULT_CONFIG,
   currentProgress: 0,
+  cameraPosition: [5, 5, 5],
+  cameraTarget: [0, 0, 0],
 
   setModelUrl: (url) => set((state) => {
     if (state.modelUrl && state.modelUrl.startsWith('blob:')) {
@@ -45,6 +49,10 @@ export const useStore = create<StoreState>((set) => ({
 
   setCurrentProgress: (progress) => set({ currentProgress: progress }),
 
+  setCameraPosition: (cameraPosition) => set({ cameraPosition }),
+
+  setCameraTarget: (cameraTarget) => set({ cameraTarget }),
+
   loadProject: (project) => set({
     config: project.config,
     keyframes: project.keyframes.sort((a, b) => a.progress - b.progress)
@@ -58,8 +66,10 @@ export const useStore = create<StoreState>((set) => ({
       modelUrl: null,
       mode: 'edit',
       keyframes: [],
-      config: DEFAULT_CONFIG,
-      currentProgress: 0
+      config: { ...DEFAULT_CONFIG },
+      currentProgress: 0,
+      cameraPosition: [5, 5, 5],
+      cameraTarget: [0, 0, 0]
     };
   }),
 }));
