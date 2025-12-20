@@ -4,21 +4,30 @@ import { useStore } from '../useStore';
 import { Scene } from './Studio/Scene';
 import { Sidebar } from './Studio/Sidebar';
 import { Timeline } from './Studio/Timeline';
+import { Handbook } from './Studio/Handbook';
 import { Uploader } from '../hooks/Uploader';
 import { KeyframeCapturer } from './Studio/KeyframeCapturer';
+import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+
+gsap.registerPlugin(ScrollTrigger);
 
 const App: React.FC = () => {
-  const { mode, modelUrl, currentProgress, sections } = useStore();
+  const { mode, modelUrl, currentProgress, sections, setMode } = useStore();
 
   useEffect(() => {
+    // Sync class for styling & height
     if (mode === 'preview') {
-      document.documentElement.classList.add('preview-mode');
-      document.body.style.overflowY = 'auto';
-      document.body.style.height = 'auto';
+      document.documentElement.className = 'preview-mode';
+      document.body.className = 'preview-mode';
+      // Force ScrollTrigger to recognize the new height
+      setTimeout(() => {
+        ScrollTrigger.refresh();
+      }, 100);
     } else {
-      document.documentElement.classList.remove('preview-mode');
-      document.body.style.overflowY = 'hidden';
-      document.body.style.height = '100vh';
+      document.documentElement.className = 'edit-mode';
+      document.body.className = 'edit-mode';
+      window.scrollTo(0, 0); // Reset scroll when entering editor
     }
   }, [mode]);
 
@@ -32,10 +41,10 @@ const App: React.FC = () => {
   }, [sections, currentProgress]);
 
   return (
-    <div className={`w-full relative bg-[#050505] transition-colors duration-1000 ${mode === 'preview' ? 'min-h-[800vh]' : 'h-screen overflow-hidden'}`}>
+    <div className={`w-full relative bg-[#050505] ${mode === 'preview' ? 'min-h-[1000vh]' : 'h-screen overflow-hidden'}`}>
       
-      {/* 3D Core */}
-      <div className="fixed inset-0 z-0 pointer-events-none">
+      {/* 3D Render Layer - Pointer events toggle based on mode */}
+      <div className={`fixed inset-0 z-0 ${mode === 'edit' ? 'pointer-events-auto' : 'pointer-events-none'}`}>
         <Canvas shadows dpr={[1, 2]} gl={{ antialias: true, alpha: true }}>
           <Suspense fallback={null}>
             <Scene />
@@ -44,10 +53,18 @@ const App: React.FC = () => {
         </Canvas>
       </div>
 
+      {/* Invisible Scroll Spacer - ONLY in preview mode to force the body height */}
+      {mode === 'preview' && (
+        <div className="absolute top-0 left-0 w-full h-[1000vh] pointer-events-none z-[-1]" />
+      )}
+
       {/* Model Onboarding */}
       {!modelUrl && <Uploader />}
 
-      {/* Builder Interface */}
+      {/* Handbook / Tutorial Overlay */}
+      <Handbook />
+
+      {/* Editor UI */}
       {mode === 'edit' && modelUrl && (
         <div className="relative z-20 w-full h-full pointer-events-none select-none">
           <div className="pointer-events-auto">
@@ -63,9 +80,10 @@ const App: React.FC = () => {
         </div>
       )}
 
-      {/* Scrollytelling Preview Overlay */}
+      {/* Preview HUD & Content */}
       {mode === 'preview' && (
-        <div className="relative z-30 w-full pointer-events-none">
+        <div className="relative z-30 w-full">
+          {/* Fixed Story Content - No pointer events so scroll reaches body */}
           <div className="fixed inset-0 pointer-events-none flex items-center justify-center">
             {sections.map((section) => {
               const isFirst = sections[0]?.id === section.id;
@@ -74,23 +92,23 @@ const App: React.FC = () => {
               return (
                 <div 
                   key={section.id}
-                  className={`absolute inset-0 flex flex-col items-center justify-center p-10 transition-all duration-700 transform ${
-                    isActive ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
+                  className={`absolute inset-0 flex flex-col items-center justify-center p-10 transition-all duration-1000 transform ${
+                    isActive ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-16'
                   }`}
                 >
                    <div className="max-w-3xl text-center space-y-6">
                       {isFirst ? (
-                        <>
-                          <div className="inline-block px-4 py-1.5 rounded-full border border-white/20 bg-white/5 backdrop-blur-md text-[10px] font-black uppercase tracking-[0.4em] text-white/60 mb-4">
+                        <div className="animate-in fade-in zoom-in-95 duration-1000">
+                          <div className="inline-block px-4 py-1.5 rounded-full border border-white/20 bg-white/5 backdrop-blur-md text-[10px] font-black uppercase tracking-[0.4em] text-white/60 mb-6">
                             Scroll to begin
                           </div>
-                          <h1 className="text-7xl md:text-9xl font-black italic tracking-tighter leading-none text-white uppercase">
+                          <h1 className="text-7xl md:text-9xl font-black italic tracking-tighter leading-none text-white uppercase drop-shadow-2xl">
                             {section.title}
                           </h1>
-                          <p className="text-gray-400 text-lg md:text-xl font-medium max-w-xl mx-auto leading-relaxed">
+                          <p className="text-gray-400 text-lg md:text-xl font-medium max-w-xl mx-auto leading-relaxed mt-6">
                             {section.description}
                           </p>
-                        </>
+                        </div>
                       ) : (
                         <div className="glass-panel p-12 rounded-[3rem] backdrop-blur-md border border-white/5 text-left max-w-xl mx-auto shadow-2xl">
                            <h2 className="text-5xl font-black italic tracking-tight text-white uppercase mb-6 leading-tight">
@@ -108,16 +126,17 @@ const App: React.FC = () => {
             })}
           </div>
 
+          {/* Exit Button - Interactive */}
           <div className="fixed top-8 left-8 z-50 pointer-events-auto">
              <button 
-              onClick={() => useStore.getState().setMode('edit')}
+              onClick={() => setMode('edit')}
               className="bg-white hover:bg-gray-200 text-black px-8 py-4 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all shadow-2xl flex items-center gap-4 active:scale-95 group"
              >
                <i className="fa-solid fa-chevron-left group-hover:-translate-x-1 transition-transform"></i> Exit Viewer
              </button>
           </div>
 
-          {/* Progress Indicator */}
+          {/* Progress Indicator - HUD */}
           <div className="fixed bottom-10 left-10 right-10 z-50 pointer-events-none flex justify-between items-end">
              <div className="space-y-1">
                <div className="text-[9px] font-black text-white/30 uppercase tracking-[0.3em]">Story Progress</div>

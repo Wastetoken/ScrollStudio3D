@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, startTransition } from 'react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { useStore } from '../useStore';
@@ -15,7 +15,7 @@ export const useGSAPTimeline = (
   const timelineRef = useRef<gsap.core.Timeline | null>(null);
 
   useEffect(() => {
-    // Immediate cleanup of any existing triggers to prevent collision
+    // Clear all existing triggers to avoid duplication
     ScrollTrigger.getAll().forEach(t => t.kill());
 
     if (!camera || keyframes.length < 1 || !modelUrl) {
@@ -31,34 +31,31 @@ export const useGSAPTimeline = (
         paused: mode === 'edit',
         onUpdate: () => {
           if (mode === 'preview') {
-            setCurrentProgress(tl.progress());
+            startTransition(() => {
+              setCurrentProgress(tl.progress());
+            });
+          }
+          if (camera) {
+            camera.updateProjectionMatrix();
           }
         },
       });
 
-      if (mode === 'preview') {
-        ScrollTrigger.create({
-          animation: tl,
-          trigger: 'body',
-          start: 'top top',
-          end: 'bottom bottom',
-          scrub: 0.5, // Smoother follow
-          invalidateOnRefresh: true,
-        });
-      }
-
+      // Build animation sequence from keyframes
       const sorted = [...keyframes].sort((a, b) => a.progress - b.progress);
-
-      // Initialize first frame
       const first = sorted[0];
       tl.set(camera.position, { x: first.position[0], y: first.position[1], z: first.position[2] }, 0);
       tl.set(lookAtProxy, { x: first.target[0], y: first.target[1], z: first.target[2] }, 0);
+      tl.set(camera, { fov: first.fov || 35 }, 0);
       
       if (modelRef.current) {
-        tl.set(modelRef.current.rotation, { x: first.rotation[0], y: first.rotation[1], z: first.rotation[2] }, 0);
+        tl.set(modelRef.current.rotation, { 
+          x: first.rotation[0], 
+          y: first.rotation[1], 
+          z: first.rotation[2] 
+        }, 0);
       }
 
-      // Build sequence
       for (let i = 1; i < sorted.length; i++) {
         const prev = sorted[i - 1];
         const current = sorted[i];
@@ -69,7 +66,7 @@ export const useGSAPTimeline = (
           x: current.position[0],
           y: current.position[1],
           z: current.position[2],
-          ease: 'power2.inOut',
+          ease: 'none', 
           duration: duration,
         }, startTime);
 
@@ -77,8 +74,15 @@ export const useGSAPTimeline = (
           x: current.target[0],
           y: current.target[1],
           z: current.target[2],
-          ease: 'power2.inOut',
+          ease: 'none',
           duration: duration,
+        }, startTime);
+
+        tl.to(camera, {
+          fov: current.fov || 35,
+          ease: 'none',
+          duration: duration,
+          onUpdate: () => camera.updateProjectionMatrix()
         }, startTime);
 
         if (modelRef.current) {
@@ -86,10 +90,26 @@ export const useGSAPTimeline = (
             x: current.rotation[0],
             y: current.rotation[1],
             z: current.rotation[2],
-            ease: 'power2.inOut',
+            ease: 'none',
             duration: duration,
           }, startTime);
         }
+      }
+
+      if (mode === 'preview') {
+        // Delay ScrollTrigger creation slightly to ensure DOM has settled with height
+        setTimeout(() => {
+          ScrollTrigger.create({
+            animation: tl,
+            trigger: "body",
+            scroller: window,
+            start: "top top",
+            end: "bottom bottom",
+            scrub: true,
+            invalidateOnRefresh: true,
+          });
+          ScrollTrigger.refresh();
+        }, 200);
       }
 
       timelineRef.current = tl;
@@ -98,18 +118,16 @@ export const useGSAPTimeline = (
     return () => {
       ctx.revert();
       ScrollTrigger.getAll().forEach(t => t.kill());
-      if (timelineRef.current) {
-        timelineRef.current.kill();
-        timelineRef.current = null;
-      }
     };
   }, [keyframes, mode, camera, lookAtProxy, modelRef, setCurrentProgress, modelUrl]);
 
+  // Handle seeking in Editor Mode
   useEffect(() => {
     if (mode === 'edit' && timelineRef.current) {
       timelineRef.current.progress(currentProgress);
+      if (camera) camera.updateProjectionMatrix();
     }
-  }, [currentProgress, mode]);
+  }, [currentProgress, mode, camera]);
 
   return timelineRef;
 };

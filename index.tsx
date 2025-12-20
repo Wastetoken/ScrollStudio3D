@@ -8,8 +8,6 @@ if (!rootElement) {
 }
 
 const root = ReactDOM.createRoot(rootElement);
-root.render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>
-);
+// StrictMode is removed as it can cause duplicate suspension and state update issues (Error #525) 
+// especially when integrating complex 3D libraries like React Three Fiber with concurrent features.
+root.render(<App />);

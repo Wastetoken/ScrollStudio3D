@@ -1,11 +1,20 @@
 export type Vector3Array = [number, number, number];
 
+export interface Hotspot {
+  id: string;
+  label: string;
+  content: string;
+  position: Vector3Array;
+  visibleAt: number; // Progress threshold (0-1)
+}
+
 export interface Keyframe {
   id: string;
-  progress: number; // 0 to 1
+  progress: number;
   position: Vector3Array;
   target: Vector3Array;
-  rotation: Vector3Array; // Model rotation
+  rotation: Vector3Array;
+  fov: number; // Per-keyframe Field of View
 }
 
 export interface StorySection {
@@ -22,9 +31,19 @@ export interface SceneConfig {
   modelPosition: Vector3Array;
   modelRotation: Vector3Array;
   showFloor: boolean;
-  autoRotate: boolean;
-  autoRotateSpeed: number;
   backgroundColor: string;
+  // Post Processing
+  bloomIntensity: number;
+  bloomThreshold: number;
+  exposure: number;
+  // Atmosphere
+  fogDensity: number;
+  fogColor: string;
+  // Lens Optics
+  focusDistance: number;
+  aperture: number;
+  bokehScale: number;
+  defaultFov: number;
 }
 
 export type EngineMode = 'edit' | 'preview';
@@ -34,6 +53,7 @@ export interface ProjectSchema {
   config: SceneConfig;
   keyframes: Keyframe[];
   sections: StorySection[];
+  hotspots: Hotspot[];
 }
 
 export interface StoreState {
@@ -41,10 +61,12 @@ export interface StoreState {
   mode: EngineMode;
   keyframes: Keyframe[];
   sections: StorySection[];
+  hotspots: Hotspot[];
   config: SceneConfig;
   currentProgress: number;
   cameraPosition: Vector3Array;
   cameraTarget: Vector3Array;
+  showHandbook: boolean;
   
   // Actions
   setModelUrl: (url: string | null) => void;
@@ -55,10 +77,14 @@ export interface StoreState {
   addSection: (section: StorySection) => void;
   removeSection: (id: string) => void;
   updateSection: (id: string, updates: Partial<StorySection>) => void;
+  addHotspot: (h: Hotspot) => void;
+  removeHotspot: (id: string) => void;
+  updateHotspot: (id: string, updates: Partial<Hotspot>) => void;
   setConfig: (config: Partial<SceneConfig>) => void;
   setCurrentProgress: (progress: number) => void;
   setCameraPosition: (pos: Vector3Array) => void;
   setCameraTarget: (target: Vector3Array) => void;
   loadProject: (project: ProjectSchema) => void;
+  setShowHandbook: (show: boolean) => void;
   reset: () => void;
 }

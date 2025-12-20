@@ -1,15 +1,20 @@
-import React, { useCallback, useRef } from 'react';
+import React, { useCallback, useRef, useTransition } from 'react';
 import { useStore } from '../useStore';
 
 export const Uploader: React.FC = () => {
   const { setModelUrl, modelUrl } = useStore();
   const inputRef = useRef<HTMLInputElement>(null);
+  const [isPending, startTransition] = useTransition();
 
   const onFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       const url = URL.createObjectURL(file);
-      setModelUrl(url);
+      // We wrap this in a transition because the Scene component will suspend 
+      // when useGLTF starts loading this new URL.
+      startTransition(() => {
+        setModelUrl(url);
+      });
       // Important: clear the input value so the same file can be chosen again after a reset
       if (inputRef.current) inputRef.current.value = '';
     }
@@ -37,10 +42,12 @@ export const Uploader: React.FC = () => {
         <div className="relative">
           <label 
             htmlFor="file-upload"
-            className="group flex flex-col items-center justify-center w-full py-8 px-6 bg-white hover:bg-gray-200 text-black rounded-2xl cursor-pointer transition-all duration-300 shadow-lg hover:shadow-white/10 active:scale-[0.98]"
+            className={`group flex flex-col items-center justify-center w-full py-8 px-6 bg-white hover:bg-gray-200 text-black rounded-2xl cursor-pointer transition-all duration-300 shadow-lg hover:shadow-white/10 active:scale-[0.98] ${isPending ? 'opacity-50 cursor-wait' : ''}`}
           >
-            <i className="fa-solid fa-cloud-arrow-up text-2xl mb-2 group-hover:translate-y-[-2px] transition-transform"></i>
-            <span className="text-sm font-bold uppercase tracking-widest">Select Model File</span>
+            <i className={`fa-solid ${isPending ? 'fa-spinner animate-spin' : 'fa-cloud-arrow-up'} text-2xl mb-2 transition-transform`}></i>
+            <span className="text-sm font-bold uppercase tracking-widest">
+              {isPending ? 'Loading Scene...' : 'Select Model File'}
+            </span>
             <input
               ref={inputRef}
               id="file-upload"
@@ -48,6 +55,7 @@ export const Uploader: React.FC = () => {
               accept=".glb,.gltf"
               onChange={onFileChange}
               className="hidden"
+              disabled={isPending}
             />
           </label>
           <div className="mt-4 flex items-center justify-center gap-2 text-[10px] text-gray-500 font-mono uppercase tracking-[0.2em]">

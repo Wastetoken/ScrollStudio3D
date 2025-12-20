@@ -1,22 +1,68 @@
-/// <reference types="@react-three/fiber" />
-import React, { useRef, useMemo, useEffect } from 'react';
-import { useFrame } from '@react-three/fiber';
-import { useGLTF, OrbitControls, PerspectiveCamera, ContactShadows, Environment } from '@react-three/drei';
+
+import React, { useRef, useMemo } from 'react';
+import { useFrame, ThreeElements } from '@react-three/fiber';
+import { 
+  useGLTF, 
+  OrbitControls, 
+  PerspectiveCamera, 
+  ContactShadows, 
+  Html
+} from '@react-three/drei';
+import { EffectComposer, Bloom, DepthOfField, Vignette } from '@react-three/postprocessing';
 import * as THREE from 'three';
 import { useStore } from '../../useStore';
 import { useGSAPTimeline } from '../../hooks/useGSAPTimeline';
 
-interface ModelProps {
-  url: string;
-  modelRef: React.RefObject<THREE.Group>;
+// Fix: Corrected the JSX namespace declaration to properly extend IntrinsicElements with ThreeElements
+declare global {
+  namespace JSX {
+    interface IntrinsicElements extends ThreeElements {}
+  }
 }
 
-const ModelPrimitive: React.FC<ModelProps> = ({ url, modelRef }) => {
+const HotspotMarker: React.FC<{ hotspot: any }> = ({ hotspot }) => {
+  const { currentProgress } = useStore();
+  // Hotspots are visible in a window around their trigger point
+  const distance = Math.abs(currentProgress - hotspot.visibleAt);
+  const isActive = distance < 0.1;
+  const opacity = Math.max(0, 1 - (distance * 8));
+
+  if (opacity <= 0) return null;
+
+  return (
+    <Html position={hotspot.position} center distanceFactor={10}>
+      <div 
+        className="group flex items-center gap-4 transition-all duration-500"
+        style={{ 
+          opacity, 
+          transform: `scale(${isActive ? 1 : 0.8})`, 
+          pointerEvents: isActive ? 'auto' : 'none' 
+        }}
+      >
+        <div className="w-5 h-5 rounded-full bg-white/20 backdrop-blur-md border border-white/40 flex items-center justify-center relative">
+          <div className="w-2 h-2 bg-white rounded-full"></div>
+          {isActive && <div className="absolute inset-0 bg-white/40 rounded-full animate-ping"></div>}
+        </div>
+        
+        {isActive && (
+          <div className="glass-panel p-4 rounded-2xl w-48 shadow-2xl border-white/10 animate-in fade-in slide-in-from-left-4 duration-500">
+            <h5 className="text-[10px] font-black uppercase text-white mb-1">{hotspot.label}</h5>
+            <p className="text-[9px] text-gray-400 leading-relaxed">{hotspot.content}</p>
+          </div>
+        )}
+      </div>
+    </Html>
+  );
+};
+
+const ModelPrimitive: React.FC<{ url: string; modelRef: React.RefObject<THREE.Group> }> = ({ url, modelRef }) => {
   const { scene } = useGLTF(url);
   const { config, mode } = useStore();
 
   useFrame(() => {
     if (mode === 'edit' && modelRef.current) {
+      // Fix: A spread argument must either have a tuple type or be passed to a rest parameter.
+      // Accessing array indices directly to avoid spread issues in this environment.
       modelRef.current.rotation.set(
         config.modelRotation[0],
         config.modelRotation[1],
@@ -25,90 +71,33 @@ const ModelPrimitive: React.FC<ModelProps> = ({ url, modelRef }) => {
     }
   });
 
-  // Fix: Intrinsic elements like 'group' and 'primitive' require the R3F JSX namespace to be correctly loaded via triple-slash directive
   return (
-    <group 
-      ref={modelRef} 
-      scale={config.modelScale} 
-      position={config.modelPosition}
-      dispose={null}
-    >
+    <group ref={modelRef} scale={config.modelScale} position={config.modelPosition} dispose={null}>
       <primitive object={scene} />
     </group>
   );
 };
 
-const CameraSync: React.FC<{ cameraRef: React.RefObject<THREE.PerspectiveCamera> }> = ({ cameraRef }) => {
-  const { mode, cameraPosition, setCameraPosition, cameraTarget, setCameraTarget, modelUrl } = useStore();
-  const controlsRef = useRef<any>(null);
-  
-  const lastStorePos = useRef(cameraPosition);
-  const lastStoreTarget = useRef(cameraTarget);
-
-  useEffect(() => {
-    lastStorePos.current = cameraPosition;
-    lastStoreTarget.current = cameraTarget;
-  }, [cameraPosition, cameraTarget]);
-
-  useFrame(() => {
-    if (!cameraRef.current || !modelUrl || mode !== 'edit') return;
-
-    const posChanged = cameraPosition.some((v, i) => Math.abs(v - lastStorePos.current[i]) > 0.0001);
-    const targetChanged = cameraTarget.some((v, i) => Math.abs(v - lastStoreTarget.current[i]) > 0.0001);
-
-    if (posChanged) {
-      cameraRef.current.position.set(cameraPosition[0], cameraPosition[1], cameraPosition[2]);
-      lastStorePos.current = cameraPosition;
-    }
-
-    if (targetChanged && controlsRef.current) {
-      controlsRef.current.target.set(cameraTarget[0], cameraTarget[1], cameraTarget[2]);
-      lastStoreTarget.current = cameraTarget;
-    }
-
-    if (!posChanged && !targetChanged) {
-      const { x, y, z } = cameraRef.current.position;
-      if (Math.abs(x - cameraPosition[0]) > 0.005 || Math.abs(y - cameraPosition[1]) > 0.005 || Math.abs(z - cameraPosition[2]) > 0.005) {
-        const newPos: [number, number, number] = [x, y, z];
-        setCameraPosition(newPos);
-        lastStorePos.current = newPos;
-      }
-
-      if (controlsRef.current) {
-        const { x: tx, y: ty, z: tz } = controlsRef.current.target;
-        if (Math.abs(tx - cameraTarget[0]) > 0.005 || Math.abs(ty - cameraTarget[1]) > 0.005 || Math.abs(tz - cameraTarget[2]) > 0.005) {
-          const newTarget: [number, number, number] = [tx, ty, tz];
-          setCameraTarget(newTarget);
-          lastStoreTarget.current = newTarget;
-        }
-      }
-    }
-  });
-
-  return mode === 'edit' && modelUrl ? (
-    <OrbitControls 
-      key={modelUrl} 
-      ref={controlsRef}
-      makeDefault 
-      enableDamping 
-      dampingFactor={0.05}
-    />
-  ) : null;
-};
-
 export const Scene: React.FC = () => {
-  const { modelUrl, mode, config } = useStore();
+  const { modelUrl, mode, config, hotspots } = useStore();
   const cameraRef = useRef<THREE.PerspectiveCamera>(null!);
   const modelRef = useRef<THREE.Group>(null!);
   const lookAtProxy = useMemo(() => new THREE.Vector3(0, 0, 0), []);
 
+  // Syncs scroll progress to camera/model properties
   useGSAPTimeline(cameraRef.current, lookAtProxy, modelRef);
 
-  useFrame((state, delta) => {
+  useFrame((state) => {
     if (!modelUrl) return;
+    
+    // Look at target in preview mode (GSAP controls lookAtProxy)
     if (mode === 'preview' && cameraRef.current) {
       cameraRef.current.lookAt(lookAtProxy);
     }
+    
+    // Update Fog
+    state.scene.fog = new THREE.FogExp2(config.fogColor, config.fogDensity);
+    state.gl.toneMappingExposure = config.exposure;
   });
 
   return (
@@ -117,42 +106,45 @@ export const Scene: React.FC = () => {
         ref={cameraRef} 
         makeDefault 
         position={[5, 5, 5]} 
-        fov={35} 
+        fov={config.defaultFov} 
       />
       
-      <CameraSync cameraRef={cameraRef} />
-
-      <Environment preset="city" intensity={0.5} />
+      {mode === 'edit' && modelUrl && (
+        <OrbitControls makeDefault enableDamping dampingFactor={0.05} />
+      )}
       
-      {/* Fix: These intrinsic light elements are now recognized after adding the fiber reference */}
       <ambientLight intensity={config.ambientIntensity} />
-      <hemisphereLight intensity={0.8} groundColor="#000000" color="#ffffff" />
-      <directionalLight 
-        position={[10, 10, 10]} 
-        intensity={config.directionalIntensity} 
-        castShadow 
-      />
-      <pointLight position={[-10, 5, -10]} intensity={1.5} color="#4444ff" />
+      <directionalLight position={[10, 10, 10]} intensity={config.directionalIntensity} castShadow />
+      <pointLight position={[-10, -10, -10]} intensity={config.ambientIntensity * 0.5} color="#4444ff" />
 
       {modelUrl && (
         <React.Suspense fallback={null}>
           <ModelPrimitive url={modelUrl} modelRef={modelRef} />
+          {hotspots.map(h => <HotspotMarker key={h.id} hotspot={h} />)}
         </React.Suspense>
       )}
 
       {config.showFloor && (
         <>
-          <ContactShadows 
-            position={[0, -1.01, 0]} 
-            opacity={0.4} 
-            scale={20} 
-            blur={2.5} 
-            far={4.5} 
-          />
-          {/* Fix: gridHelper is a valid intrinsic element provided by @react-three/fiber types */}
+          <ContactShadows position={[0, -1.01, 0]} opacity={0.4} scale={20} blur={2.5} far={4.5} />
           <gridHelper args={[40, 40, 0x222222, 0x111111]} position={[0, -1, 0]} />
         </>
       )}
+
+      {/* Post-Processing Stack */}
+      <EffectComposer disableNormalPass>
+        <Bloom 
+          luminanceThreshold={config.bloomThreshold} 
+          intensity={config.bloomIntensity} 
+          mipmapBlur 
+        />
+        <DepthOfField 
+          focusDistance={config.focusDistance / 20} // Normalized for post-processing unit
+          focalLength={0.02} 
+          bokehScale={config.aperture * 100} 
+        />
+        <Vignette eskil={false} offset={0.1} darkness={1.1} />
+      </EffectComposer>
     </>
   );
 };
