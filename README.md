@@ -1,10 +1,10 @@
-# 🎬 ScrollStudio 3D: Cinematic Scrollytelling Engine
+#  ScrollStudio 3D: Cinematic Scrollytelling Engine
 
 **ScrollStudio** is a professional-grade, browser-based creative suite designed to bridge the gap between high-end 3D production and web-based scrollytelling. It allows designers and developers to transform standard GLB/GLTF models into immersive, scroll-driven cinematic experiences similar to those seen on premium product landing pages (e.g., Apple, Sony, Tesla).
 
 ---
 
-## 🚀 The Mission: Why ScrollStudio?
+##  The Mission: Why ScrollStudio?
 
 Creating 3D scrollytelling experiences is historically difficult. It requires deep knowledge of:
 1. **Mathematics:** Calculating camera paths and look-at vectors through 3D space.
@@ -15,7 +15,7 @@ Creating 3D scrollytelling experiences is historically difficult. It requires de
 
 ---
 
-## 🛠 Core Features
+##  Core Features
 
 ### 1. Keyframe-Based Camera Pathing
 The engine uses a **Snapshot Method**. Instead of defining a path with code, you simply position the camera in the editor at a specific scroll percentage (e.g., 25%) and hit "Capture." The engine automatically calculates the smooth Hermite or linear interpolation between that point and your next keyframe.
@@ -37,7 +37,7 @@ Built-in professional optics controls:
 
 ---
 
-## 📖 How to Use the Studio
+##  How to Use the Studio
 
 ### Step 1: The Onboarding
 Launch the app and upload a `.glb` or `.gltf` file. Your model is processed locally in the browser—no data is sent to a server.
@@ -46,7 +46,7 @@ Launch the app and upload a `.glb` or `.gltf` file. Your model is processed loca
 1.  Set your timeline to **0%**.
 2.  Use the mouse to orbit, pan, and zoom until you have the perfect "Hero" shot.
 3.  Click the **Camera Icon (Capture View)**.
-4.  Move the timeline to **100%**.
+4.  Move the timeline to **100%** (or anywhere).
 5.  Reposition the camera for the "Final" shot and click **Capture** again.
 6.  *The path is now live.* Scrub the timeline to see the interpolation.
 
@@ -61,14 +61,14 @@ Once satisfied, go to the **Project Tab** and click **Download Project JSON**. T
 
 ---
 
-## 🏗 Technical Architecture
+##  Technical Architecture
 
 *   **Engine:** [React Three Fiber](https://r3f.docs.pmnd.rs/) (Three.js abstraction).
 *   **Interpolation:** [GSAP](https://gsap.com/) (GreenSock) for high-precision timeline scrubbing.
 *   **State Management:** [Zustand](https://github.com/pmndrs/zustand) for a high-performance reactive store.
 *   **Optics:** [@react-three/postprocessing](https://github.com/pmndrs/react-postprocessing) for GPU-accelerated shaders.
 
-## 📦 Production Deployment
+##  Production Deployment
 
 To use your creation in a production website:
 1.  Initialize a standard Three.js/R3F scene.
@@ -77,4 +77,4 @@ To use your creation in a production website:
 4.  Map the `scrollProgress` to the engine's `seek()` function.
 
 ---
-*Built for creators by ScrollStudio Engineering.*
+*Built for creators.*
