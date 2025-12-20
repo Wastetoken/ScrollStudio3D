@@ -17,6 +17,7 @@ export const Sidebar: React.FC = () => {
     hotspots,
     addHotspot,
     removeHotspot,
+    updateHotspot,
     setShowHandbook,
     keyframes,
     loadProject
@@ -30,8 +31,8 @@ export const Sidebar: React.FC = () => {
   const handleAddHotspot = () => {
     addHotspot({
       id: Math.random().toString(36).substr(2, 9),
-      label: 'New Annotation',
-      content: 'Describe this specific detail here.',
+      label: 'New Detail',
+      content: 'Explain a specific technical detail or feature here.',
       position: [...cameraTarget],
       visibleAt: currentProgress
     });
@@ -106,10 +107,10 @@ export const Sidebar: React.FC = () => {
           {activeTab === 'story' && (
             <div className="space-y-4">
               <button 
-                onClick={() => addSection({ id: Date.now().toString(), progress: currentProgress, title: 'Beat', description: '' })} 
+                onClick={() => addSection({ id: Date.now().toString(), progress: currentProgress, title: 'Beat Title', description: '' })} 
                 className="w-full py-3 bg-white text-black text-[9px] font-black uppercase rounded-xl hover:bg-gray-200 transition-colors"
               >
-                + Add Story Beat
+                + Add Narrative Beat
               </button>
               {sections.map(s => (
                 <div key={s.id} className="p-4 bg-white/5 rounded-xl space-y-2 relative group">
@@ -127,9 +128,9 @@ export const Sidebar: React.FC = () => {
                     value={s.description} 
                     onChange={e => updateSection(s.id, { description: e.target.value })} 
                     className="bg-transparent w-full text-[9px] text-gray-400 h-16 resize-none outline-none" 
-                    placeholder="Describe this scene..." 
+                    placeholder="Describe the mood or context..." 
                   />
-                  <div className="text-[8px] text-white/20 font-mono">T: {(s.progress * 100).toFixed(0)}%</div>
+                  <div className="text-[8px] text-white/20 font-mono">Visible at: {(s.progress * 100).toFixed(0)}%</div>
                 </div>
               ))}
             </div>
@@ -154,7 +155,7 @@ export const Sidebar: React.FC = () => {
               </section>
 
               <section className="space-y-3 pt-6 border-t border-white/5">
-                <h4 className="text-[9px] uppercase font-black text-white/40 tracking-widest">Optics (Lens)</h4>
+                <h4 className="text-[9px] uppercase font-black text-white/40 tracking-widest">Global Optics</h4>
                 <div className="space-y-2">
                   <label className="flex justify-between text-[9px] uppercase font-bold">
                     Field of View <span>{config.defaultFov}mm</span>
@@ -168,46 +169,58 @@ export const Sidebar: React.FC = () => {
           {activeTab === 'fx' && (
             <div className="space-y-6">
               <section className="space-y-3">
-                <h4 className="text-[9px] uppercase font-black text-white/40 tracking-widest">Focus & Blur</h4>
-                <div className="space-y-2">
-                  <label className="flex justify-between text-[9px] uppercase font-bold">Distance <span>{config.focusDistance}m</span></label>
-                  <input type="range" min="0.1" max="20" step="0.1" value={config.focusDistance} onChange={e => setConfig({ focusDistance: parseFloat(e.target.value) })} className="w-full" />
+                <div className="flex items-center justify-between">
+                  <h4 className="text-[9px] uppercase font-black text-white/40 tracking-widest">3D Annotations</h4>
+                  <div className="group relative">
+                    <i className="fa-solid fa-circle-info text-white/20 text-[10px] cursor-help"></i>
+                    <div className="absolute bottom-full right-0 w-32 p-2 bg-black text-[8px] text-gray-400 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity border border-white/10 mb-2 pointer-events-none z-50">
+                      Anchors to whatever is centered in your 3D view.
+                    </div>
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <label className="flex justify-between text-[9px] uppercase font-bold">Aperture <span>{config.aperture.toFixed(3)}</span></label>
-                  <input type="range" min="0" max="0.1" step="0.001" value={config.aperture} onChange={e => setConfig({ aperture: parseFloat(e.target.value) })} className="w-full" />
-                </div>
-              </section>
-
-              <section className="space-y-3 pt-4 border-t border-white/5">
-                <h4 className="text-[9px] uppercase font-black text-white/40 tracking-widest">Atmosphere</h4>
-                <div className="space-y-2">
-                  <label className="flex justify-between text-[9px] uppercase font-bold">Fog <span>{config.fogDensity.toFixed(3)}</span></label>
-                  <input type="range" min="0" max="0.1" step="0.005" value={config.fogDensity} onChange={e => setConfig({ fogDensity: parseFloat(e.target.value) })} className="w-full" />
-                </div>
-                <div className="space-y-2">
-                  <label className="flex justify-between text-[9px] uppercase font-bold">Bloom <span>{config.bloomIntensity.toFixed(1)}</span></label>
-                  <input type="range" min="0" max="5" step="0.1" value={config.bloomIntensity} onChange={e => setConfig({ bloomIntensity: parseFloat(e.target.value) })} className="w-full" />
-                </div>
-              </section>
-
-              <section className="space-y-3 pt-4 border-t border-white/5">
-                <h4 className="text-[9px] uppercase font-black text-white/40 tracking-widest">Annotations</h4>
                 <button 
                   onClick={handleAddHotspot} 
-                  className="w-full py-2 bg-white/10 text-white text-[8px] font-black uppercase rounded-lg hover:bg-white/20 transition-all"
+                  className="w-full py-3 bg-white text-black text-[8px] font-black uppercase rounded-lg hover:bg-emerald-400 transition-all shadow-xl"
                 >
                   + Pin Hotspot Here
                 </button>
-                <div className="space-y-2 max-h-40 overflow-y-auto no-scrollbar">
+                <div className="space-y-2 max-h-60 overflow-y-auto no-scrollbar">
                   {hotspots.map(h => (
-                    <div key={h.id} className="p-2 bg-white/5 rounded flex justify-between items-center group">
-                      <span className="text-[8px] text-white/60 truncate w-32">{h.label}</span>
-                      <button onClick={() => removeHotspot(h.id)} className="text-red-500/30 hover:text-red-500 transition-all">
-                        <i className="fa-solid fa-trash text-[8px]"></i>
-                      </button>
+                    <div key={h.id} className="p-3 bg-white/5 rounded-xl space-y-2 group border border-white/5">
+                      <div className="flex justify-between items-center">
+                        <input 
+                          value={h.label} 
+                          onChange={e => updateHotspot(h.id, { label: e.target.value })} 
+                          className="bg-transparent text-[9px] font-bold text-white outline-none w-full border-b border-transparent focus:border-white/20"
+                        />
+                        <button onClick={() => removeHotspot(h.id)} className="text-red-500/30 hover:text-red-500 transition-all pl-2">
+                          <i className="fa-solid fa-trash text-[8px]"></i>
+                        </button>
+                      </div>
+                      <textarea 
+                        value={h.content} 
+                        onChange={e => updateHotspot(h.id, { content: e.target.value })} 
+                        className="bg-transparent w-full text-[8px] text-gray-500 h-12 resize-none outline-none"
+                        placeholder="Detail content..."
+                      />
+                      <div className="text-[7px] font-mono text-white/10">Attached at: {(h.visibleAt * 100).toFixed(0)}%</div>
                     </div>
                   ))}
+                  {hotspots.length === 0 && <div className="text-center py-4 text-[9px] text-gray-600 italic">No spatial pins yet.</div>}
+                </div>
+              </section>
+
+              <section className="space-y-3 pt-6 border-t border-white/5">
+                <h4 className="text-[9px] uppercase font-black text-white/40 tracking-widest">Atmospheric FX</h4>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <label className="flex justify-between text-[9px] uppercase font-bold">Fog <span>{config.fogDensity.toFixed(3)}</span></label>
+                    <input type="range" min="0" max="0.1" step="0.005" value={config.fogDensity} onChange={e => setConfig({ fogDensity: parseFloat(e.target.value) })} className="w-full" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="flex justify-between text-[9px] uppercase font-bold">Bloom <span>{config.bloomIntensity.toFixed(1)}</span></label>
+                    <input type="range" min="0" max="5" step="0.1" value={config.bloomIntensity} onChange={e => setConfig({ bloomIntensity: parseFloat(e.target.value) })} className="w-full" />
+                  </div>
                 </div>
               </section>
             </div>

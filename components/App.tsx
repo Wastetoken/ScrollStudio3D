@@ -21,13 +21,14 @@ const App: React.FC = () => {
       document.documentElement.className = 'preview-mode';
       document.body.className = 'preview-mode';
       // Force ScrollTrigger to recognize the new height
-      setTimeout(() => {
+      const timer = setTimeout(() => {
         ScrollTrigger.refresh();
       }, 100);
+      return () => clearTimeout(timer);
     } else {
       document.documentElement.className = 'edit-mode';
       document.body.className = 'edit-mode';
-      window.scrollTo(0, 0); // Reset scroll when entering editor
+      window.scrollTo(0, 0); 
     }
   }, [mode]);
 
@@ -43,9 +44,18 @@ const App: React.FC = () => {
   return (
     <div className={`w-full relative bg-[#050505] ${mode === 'preview' ? 'min-h-[1000vh]' : 'h-screen overflow-hidden'}`}>
       
-      {/* 3D Render Layer - Pointer events toggle based on mode */}
+      {/* 3D Render Layer */}
       <div className={`fixed inset-0 z-0 ${mode === 'edit' ? 'pointer-events-auto' : 'pointer-events-none'}`}>
-        <Canvas shadows dpr={[1, 2]} gl={{ antialias: true, alpha: true }}>
+        <Canvas 
+          shadows 
+          dpr={[1, 2]} 
+          gl={{ 
+            antialias: true, 
+            alpha: true,
+            powerPreference: "high-performance" 
+          }}
+          camera={{ fov: 35, position: [5, 5, 5] }}
+        >
           <Suspense fallback={null}>
             <Scene />
             <KeyframeCapturer />
@@ -53,7 +63,7 @@ const App: React.FC = () => {
         </Canvas>
       </div>
 
-      {/* Invisible Scroll Spacer - ONLY in preview mode to force the body height */}
+      {/* Invisible Scroll Spacer */}
       {mode === 'preview' && (
         <div className="absolute top-0 left-0 w-full h-[1000vh] pointer-events-none z-[-1]" />
       )}
@@ -83,7 +93,6 @@ const App: React.FC = () => {
       {/* Preview HUD & Content */}
       {mode === 'preview' && (
         <div className="relative z-30 w-full">
-          {/* Fixed Story Content - No pointer events so scroll reaches body */}
           <div className="fixed inset-0 pointer-events-none flex items-center justify-center">
             {sections.map((section) => {
               const isFirst = sections[0]?.id === section.id;
@@ -126,7 +135,6 @@ const App: React.FC = () => {
             })}
           </div>
 
-          {/* Exit Button - Interactive */}
           <div className="fixed top-8 left-8 z-50 pointer-events-auto">
              <button 
               onClick={() => setMode('edit')}
@@ -136,7 +144,6 @@ const App: React.FC = () => {
              </button>
           </div>
 
-          {/* Progress Indicator - HUD */}
           <div className="fixed bottom-10 left-10 right-10 z-50 pointer-events-none flex justify-between items-end">
              <div className="space-y-1">
                <div className="text-[9px] font-black text-white/30 uppercase tracking-[0.3em]">Story Progress</div>

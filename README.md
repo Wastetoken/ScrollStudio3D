@@ -1,20 +1,80 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# 🎬 ScrollStudio 3D: Cinematic Scrollytelling Engine
 
-# Run and deploy your AI Studio app
+**ScrollStudio** is a professional-grade, browser-based creative suite designed to bridge the gap between high-end 3D production and web-based scrollytelling. It allows designers and developers to transform standard GLB/GLTF models into immersive, scroll-driven cinematic experiences similar to those seen on premium product landing pages (e.g., Apple, Sony, Tesla).
 
-This contains everything you need to run your app locally.
+---
 
-View your app in AI Studio: https://ai.studio/apps/drive/1pVBUoBq1d00dc7JFmaUkCS6lwFN7yB60
+## 🚀 The Mission: Why ScrollStudio?
 
-## Run Locally
+Creating 3D scrollytelling experiences is historically difficult. It requires deep knowledge of:
+1. **Mathematics:** Calculating camera paths and look-at vectors through 3D space.
+2. **Performance:** Managing WebGL context and expensive post-processing shaders.
+3. **Synchronization:** Mapping arbitrary scroll percentages to complex GSAP timelines.
 
-**Prerequisites:**  Node.js
+**ScrollStudio was built to democratize this workflow.** It provides a visual "Director's View" where you can physically position the camera, capture keyframes, and layer narrative beats without writing a single line of interpolation math.
 
+---
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+## 🛠 Core Features
+
+### 1. Keyframe-Based Camera Pathing
+The engine uses a **Snapshot Method**. Instead of defining a path with code, you simply position the camera in the editor at a specific scroll percentage (e.g., 25%) and hit "Capture." The engine automatically calculates the smooth Hermite or linear interpolation between that point and your next keyframe.
+
+### 2. Spatial Annotations (Hotspots)
+Unlike standard UI overlays, Hotspots are pinned to **3D Coordinates**. 
+*   **Anchoring:** They are tethered to the model's geometry.
+*   **Proximity Logic:** They automatically fade in/out based on the user's scroll position relative to the pin's "creation percentage."
+
+### 3. Narrative Beats
+A dedicated story layer that handles full-screen text transitions. These are synced to the scroll progress, allowing you to tell a linear story as the camera orbits the model.
+
+### 4. Cinematic Post-Processing
+Built-in professional optics controls:
+*   **Depth of Field (Bokeh):** Real-time blur based on aperture and focus distance.
+*   **Volumetric Fog:** Adds scale and atmospheric depth.
+*   **Bloom & HDR:** High-dynamic-range glow for emissive materials.
+*   **FOV Control:** Switch between wide-angle (15mm) and telephoto (80mm) perspectives.
+
+---
+
+## 📖 How to Use the Studio
+
+### Step 1: The Onboarding
+Launch the app and upload a `.glb` or `.gltf` file. Your model is processed locally in the browser—no data is sent to a server.
+
+### Step 2: Blocking the Scene
+1.  Set your timeline to **0%**.
+2.  Use the mouse to orbit, pan, and zoom until you have the perfect "Hero" shot.
+3.  Click the **Camera Icon (Capture View)**.
+4.  Move the timeline to **100%**.
+5.  Reposition the camera for the "Final" shot and click **Capture** again.
+6.  *The path is now live.* Scrub the timeline to see the interpolation.
+
+### Step 3: Layering FX
+Go to the **FX Tab** to tune the atmosphere. Increase the **Fog Density** to hide the world edges and adjust the **Aperture** to focus the viewer's eye on specific mechanical details of your model.
+
+### Step 4: Adding "The Why" (Narrative)
+Use the **Story Tab** to add Narrative Beats. For a car model, you might add a beat at 30% titled "Aerodynamics" and another at 70% titled "Electric Powerhouse." These will fade in gracefully as the user scrolls.
+
+### Step 5: Master Export
+Once satisfied, go to the **Project Tab** and click **Download Project JSON**. This file contains the "brain" of your experience.
+
+---
+
+## 🏗 Technical Architecture
+
+*   **Engine:** [React Three Fiber](https://r3f.docs.pmnd.rs/) (Three.js abstraction).
+*   **Interpolation:** [GSAP](https://gsap.com/) (GreenSock) for high-precision timeline scrubbing.
+*   **State Management:** [Zustand](https://github.com/pmndrs/zustand) for a high-performance reactive store.
+*   **Optics:** [@react-three/postprocessing](https://github.com/pmndrs/react-postprocessing) for GPU-accelerated shaders.
+
+## 📦 Production Deployment
+
+To use your creation in a production website:
+1.  Initialize a standard Three.js/R3F scene.
+2.  Load the `Project JSON` exported from the Studio.
+3.  Feed the keyframe data into a GSAP ScrollTrigger.
+4.  Map the `scrollProgress` to the engine's `seek()` function.
+
+---
+*Built for creators by ScrollStudio Engineering.*
