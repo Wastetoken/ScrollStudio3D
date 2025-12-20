@@ -36,6 +36,7 @@ export const useStore = create<StoreState>((set) => ({
   cameraPosition: [5, 5, 5],
   cameraTarget: [0, 0, 0],
   showHandbook: false,
+  isPlacingHotspot: false,
 
   setModelUrl: (url) => set((state) => {
     if (url && state.modelUrl && state.modelUrl.startsWith('blob:') && state.modelUrl !== url) {
@@ -71,7 +72,8 @@ export const useStore = create<StoreState>((set) => ({
   })),
 
   addHotspot: (h) => set((state) => ({
-    hotspots: [...state.hotspots, h]
+    hotspots: [...state.hotspots, h],
+    isPlacingHotspot: false
   })),
 
   removeHotspot: (id) => set((state) => ({
@@ -94,6 +96,8 @@ export const useStore = create<StoreState>((set) => ({
 
   setShowHandbook: (show) => set({ showHandbook: show }),
 
+  setIsPlacingHotspot: (isPlacing) => set({ isPlacingHotspot: isPlacing }),
+
   loadProject: (project) => set({
     config: { ...DEFAULT_CONFIG, ...project.config },
     keyframes: project.keyframes || [],
@@ -111,6 +115,7 @@ export const useStore = create<StoreState>((set) => ({
     currentProgress: 0,
     cameraPosition: [5, 5, 5],
     cameraTarget: [0, 0, 0],
-    showHandbook: false
+    showHandbook: false,
+    isPlacingHotspot: false
   }),
 }));

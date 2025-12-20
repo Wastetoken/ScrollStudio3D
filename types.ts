@@ -5,7 +5,9 @@ export interface Hotspot {
   label: string;
   content: string;
   position: Vector3Array;
+  normal: Vector3Array; // Added to calculate "jet out" direction
   visibleAt: number; // Progress threshold (0-1)
+  side: 'left' | 'right' | 'auto'; 
 }
 
 export interface Keyframe {
@@ -67,6 +69,7 @@ export interface StoreState {
   cameraPosition: Vector3Array;
   cameraTarget: Vector3Array;
   showHandbook: boolean;
+  isPlacingHotspot: boolean;
   
   // Actions
   setModelUrl: (url: string | null) => void;
@@ -86,5 +89,6 @@ export interface StoreState {
   setCameraTarget: (target: Vector3Array) => void;
   loadProject: (project: ProjectSchema) => void;
   setShowHandbook: (show: boolean) => void;
+  setIsPlacingHotspot: (isPlacing: boolean) => void;
   reset: () => void;
 }

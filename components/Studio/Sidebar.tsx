@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, startTransition } from 'react';
 import { useStore } from '../../useStore';
 
 export const Sidebar: React.FC = () => {
@@ -13,30 +13,20 @@ export const Sidebar: React.FC = () => {
     addSection,
     removeSection,
     updateSection,
-    cameraTarget,
     hotspots,
-    addHotspot,
     removeHotspot,
     updateHotspot,
     setShowHandbook,
     keyframes,
-    loadProject
+    loadProject,
+    isPlacingHotspot,
+    setIsPlacingHotspot
   } = useStore();
   
   const [activeTab, setActiveTab] = useState<'scene' | 'story' | 'fx' | 'project'>('story');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   if (!modelUrl) return null;
-
-  const handleAddHotspot = () => {
-    addHotspot({
-      id: Math.random().toString(36).substr(2, 9),
-      label: 'New Detail',
-      content: 'Explain a specific technical detail or feature here.',
-      position: [...cameraTarget],
-      visibleAt: currentProgress
-    });
-  };
 
   const handleExport = () => {
     const projectData = {
@@ -62,7 +52,10 @@ export const Sidebar: React.FC = () => {
     reader.onload = (event) => {
       try {
         const json = JSON.parse(event.target?.result as string);
-        loadProject(json);
+        // Wrapping in startTransition prevents synchronous suspension errors
+        startTransition(() => {
+          loadProject(json);
+        });
       } catch (err) {
         alert("Invalid project file.");
       }
@@ -71,18 +64,30 @@ export const Sidebar: React.FC = () => {
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
+  const changeMode = (newMode: 'edit' | 'preview') => {
+    startTransition(() => {
+      setMode(newMode);
+    });
+  };
+
+  const handleAddSection = () => {
+    startTransition(() => {
+      addSection({ id: Date.now().toString(), progress: currentProgress, title: 'Beat Title', description: '' });
+    });
+  };
+
   return (
     <div className="fixed left-6 top-6 bottom-32 w-80 z-40 flex flex-col gap-4 pointer-events-none">
       {/* Mode Switcher */}
       <div className="glass-panel p-2 rounded-xl flex pointer-events-auto shadow-2xl border-white/5">
         <button 
-          onClick={() => setMode('edit')} 
+          onClick={() => changeMode('edit')} 
           className={`flex-1 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${mode === 'edit' ? 'bg-white text-black' : 'text-gray-500'}`}
         >
           Editor
         </button>
         <button 
-          onClick={() => setMode('preview')} 
+          onClick={() => changeMode('preview')} 
           className={`flex-1 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${mode === 'preview' ? 'bg-white text-black' : 'text-gray-500'}`}
         >
           Preview
@@ -107,7 +112,7 @@ export const Sidebar: React.FC = () => {
           {activeTab === 'story' && (
             <div className="space-y-4">
               <button 
-                onClick={() => addSection({ id: Date.now().toString(), progress: currentProgress, title: 'Beat Title', description: '' })} 
+                onClick={handleAddSection} 
                 className="w-full py-3 bg-white text-black text-[9px] font-black uppercase rounded-xl hover:bg-gray-200 transition-colors"
               >
                 + Add Narrative Beat
@@ -117,16 +122,16 @@ export const Sidebar: React.FC = () => {
                   <div className="flex justify-between items-center">
                     <input 
                       value={s.title} 
-                      onChange={e => updateSection(s.id, { title: e.target.value })} 
+                      onChange={e => startTransition(() => updateSection(s.id, { title: e.target.value }))} 
                       className="bg-transparent border-b border-white/10 w-full text-[10px] font-bold text-white outline-none focus:border-white/40"
                     />
-                    <button onClick={() => removeSection(s.id)} className="ml-2 text-red-500/50 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all">
+                    <button onClick={() => startTransition(() => removeSection(s.id))} className="ml-2 text-red-500/50 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all">
                       <i className="fa-solid fa-xmark text-[10px]"></i>
                     </button>
                   </div>
                   <textarea 
                     value={s.description} 
-                    onChange={e => updateSection(s.id, { description: e.target.value })} 
+                    onChange={e => startTransition(() => updateSection(s.id, { description: e.target.value }))} 
                     className="bg-transparent w-full text-[9px] text-gray-400 h-16 resize-none outline-none" 
                     placeholder="Describe the mood or context..." 
                   />
@@ -174,39 +179,57 @@ export const Sidebar: React.FC = () => {
                   <div className="group relative">
                     <i className="fa-solid fa-circle-info text-white/20 text-[10px] cursor-help"></i>
                     <div className="absolute bottom-full right-0 w-32 p-2 bg-black text-[8px] text-gray-400 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity border border-white/10 mb-2 pointer-events-none z-50">
-                      Anchors to whatever is centered in your 3D view.
+                      Tap anywhere on the model surface to place.
                     </div>
                   </div>
                 </div>
+                
                 <button 
-                  onClick={handleAddHotspot} 
-                  className="w-full py-3 bg-white text-black text-[8px] font-black uppercase rounded-lg hover:bg-emerald-400 transition-all shadow-xl"
+                  onClick={() => setIsPlacingHotspot(!isPlacingHotspot)} 
+                  className={`w-full py-3 text-[8px] font-black uppercase rounded-lg transition-all shadow-xl border ${
+                    isPlacingHotspot 
+                      ? 'bg-emerald-500 text-white border-emerald-400 animate-pulse' 
+                      : 'bg-white text-black border-transparent hover:bg-emerald-400'
+                  }`}
                 >
-                  + Pin Hotspot Here
+                  {isPlacingHotspot ? 'Select Placement Point...' : '+ Pin Hotspot (Hand Placement)'}
                 </button>
-                <div className="space-y-2 max-h-60 overflow-y-auto no-scrollbar">
+
+                {isPlacingHotspot && (
+                  <p className="text-[7px] text-emerald-400 font-bold uppercase text-center tracking-widest">
+                    <i className="fa-solid fa-mouse-pointer mr-1"></i> Click model to anchor
+                  </p>
+                )}
+
+                <div className="space-y-2 max-h-60 overflow-y-auto no-scrollbar pt-2">
                   {hotspots.map(h => (
                     <div key={h.id} className="p-3 bg-white/5 rounded-xl space-y-2 group border border-white/5">
                       <div className="flex justify-between items-center">
-                        <input 
-                          value={h.label} 
-                          onChange={e => updateHotspot(h.id, { label: e.target.value })} 
-                          className="bg-transparent text-[9px] font-bold text-white outline-none w-full border-b border-transparent focus:border-white/20"
-                        />
-                        <button onClick={() => removeHotspot(h.id)} className="text-red-500/30 hover:text-red-500 transition-all pl-2">
+                         <div className="flex items-center gap-2">
+                            <div className="w-1.5 h-1.5 bg-white rounded-full"></div>
+                            <input 
+                              value={h.label} 
+                              onChange={e => startTransition(() => updateHotspot(h.id, { label: e.target.value }))} 
+                              className="bg-transparent text-[9px] font-bold text-white outline-none w-full border-b border-transparent focus:border-white/20"
+                            />
+                         </div>
+                        <button onClick={() => startTransition(() => removeHotspot(h.id))} className="text-red-500/30 hover:text-red-500 transition-all pl-2">
                           <i className="fa-solid fa-trash text-[8px]"></i>
                         </button>
                       </div>
                       <textarea 
                         value={h.content} 
-                        onChange={e => updateHotspot(h.id, { content: e.target.value })} 
+                        onChange={e => startTransition(() => updateHotspot(h.id, { content: e.target.value }))} 
                         className="bg-transparent w-full text-[8px] text-gray-500 h-12 resize-none outline-none"
                         placeholder="Detail content..."
                       />
-                      <div className="text-[7px] font-mono text-white/10">Attached at: {(h.visibleAt * 100).toFixed(0)}%</div>
+                      <div className="flex justify-between items-center text-[7px] font-mono text-white/10 uppercase tracking-tighter">
+                        <span>Side: {h.side}</span>
+                        <span>Attached: {(h.visibleAt * 100).toFixed(0)}%</span>
+                      </div>
                     </div>
                   ))}
-                  {hotspots.length === 0 && <div className="text-center py-4 text-[9px] text-gray-600 italic">No spatial pins yet.</div>}
+                  {hotspots.length === 0 && !isPlacingHotspot && <div className="text-center py-4 text-[9px] text-gray-600 italic">No spatial pins yet.</div>}
                 </div>
               </section>
 

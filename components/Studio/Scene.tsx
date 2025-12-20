@@ -1,5 +1,5 @@
-import React, { useRef, useMemo, useEffect } from 'react';
-import { useFrame, ThreeElements, useThree } from '@react-three/fiber';
+import React, { useRef, useMemo, useEffect, Suspense, startTransition } from 'react';
+import { useFrame, useThree } from '@react-three/fiber';
 import { 
   useGLTF, 
   OrbitControls, 
@@ -11,40 +11,87 @@ import { EffectComposer, Bloom, DepthOfField, Vignette } from '@react-three/post
 import * as THREE from 'three';
 import { useStore } from '../../useStore';
 import { useGSAPTimeline } from '../../hooks/useGSAPTimeline';
+import { Hotspot } from '../../types';
 
-// The manual JSX declaration was shadowing the standard React HTML types (div, span, etc.)
-// causing pervasive errors across the application. We rely on the environment's standard
-// React types and use targeted suppressions for R3F-specific intrinsic elements.
-
-const HotspotMarker: React.FC<{ hotspot: any }> = ({ hotspot }) => {
+const HotspotMarker: React.FC<{ hotspot: Hotspot }> = ({ hotspot }) => {
   const { currentProgress } = useStore();
   const distance = Math.abs(currentProgress - hotspot.visibleAt);
-  const isActive = distance < 0.08;
-  const opacity = Math.max(0, 1 - (distance * 12));
+  const isActive = distance < 0.12;
+  const opacity = Math.max(0, 1 - (distance * 10));
 
   if (opacity <= 0) return null;
 
+  // Calculate "Jet Out" direction based on normal
+  // normal[0] is X (Left/Right), normal[1] is Y (Up/Down)
+  const isLeft = hotspot.normal[0] < 0;
+  const isUp = hotspot.normal[1] > 0;
+  const jetDistance = 160; // Base length of the leader line
+
   return (
-    <Html position={hotspot.position} center distanceFactor={12}>
+    <Html 
+      position={hotspot.position} 
+      center 
+      distanceFactor={8}
+      zIndexRange={[100, 0]}
+    >
       <div 
-        className="group flex flex-col items-center transition-all duration-700 pointer-events-none"
-        style={{ 
-          opacity, 
-          transform: `scale(${isActive ? 1 : 0.6})`,
-        }}
+        className="relative transition-all duration-1000 pointer-events-none"
+        style={{ opacity }}
       >
-        <div className="relative flex flex-col items-center">
-          <div className={`glass-panel p-4 rounded-2xl w-52 shadow-2xl border-white/20 mb-4 transition-all duration-500 transform ${isActive ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'}`}>
-            <div className="flex items-center gap-2 mb-2">
-               <div className="w-1.5 h-1.5 bg-white rounded-full"></div>
-               <h5 className="text-[10px] font-black uppercase text-white tracking-widest truncate">{hotspot.label}</h5>
+        {/* 1. THE ANCHOR POINT (Centered exactly on position) */}
+        <div className="absolute -translate-x-1/2 -translate-y-1/2 flex items-center justify-center w-6 h-6">
+          <div className="absolute inset-0 bg-white/20 rounded-full blur-md animate-pulse"></div>
+          <div className={`w-2 h-2 bg-white rounded-full transition-all duration-500 shadow-[0_0_15px_white] ${isActive ? 'scale-125' : 'scale-50'}`}></div>
+        </div>
+
+        {/* 2. THE JETTING CONTAINER 
+            We rotate and translate this based on the normal to "jet out" to wherever the model isn't.
+        */}
+        <div 
+          className={`absolute flex items-center transition-all duration-1000 origin-left ${isActive ? 'opacity-100' : 'opacity-0'}`}
+          style={{ 
+            width: `${jetDistance}px`,
+            // If normal points left, flip the whole container 180deg
+            transform: `rotate(${isLeft ? '180deg' : '0deg'}) scale(${isActive ? 1 : 0.5})`,
+            // Offset slightly from the dot center
+            left: isLeft ? '-10px' : '10px',
+            top: '0px'
+          }}
+        >
+          {/* Leader Line */}
+          <div 
+            className={`h-[1.5px] bg-gradient-to-r from-white via-white/50 to-transparent transition-all duration-1000 origin-left shrink-0 ${isActive ? 'scale-x-100' : 'scale-x-0'}`}
+            style={{ width: '100%' }}
+          />
+
+          {/* 3. THE DIALOG BOX 
+              We counter-rotate the dialog so the text stays upright 
+          */}
+          <div 
+            className={`glass-panel p-6 rounded-[2rem] w-72 shadow-[0_30px_60px_-15px_rgba(0,0,0,0.7)] border-white/10 transition-all duration-1000 pointer-events-auto ${
+              isActive 
+                ? 'opacity-100 translate-y-0 scale-100' 
+                : 'opacity-0 translate-y-4 scale-90'
+            }`}
+            style={{ 
+              transform: `rotate(${isLeft ? '-180deg' : '0deg'})`,
+              // Apply a small vertical offset if the normal suggests it
+              marginTop: isUp ? '-40px' : '40px'
+            }}
+          >
+            <div className="flex items-center gap-3 mb-3">
+               <div className="w-1.5 h-1.5 bg-white rounded-full shadow-[0_0_8px_white]"></div>
+               <h5 className="text-[11px] font-black uppercase text-white tracking-[0.25em] truncate">
+                 {hotspot.label}
+               </h5>
             </div>
-            <p className="text-[9px] text-gray-400 leading-relaxed font-medium">{hotspot.content}</p>
-          </div>
-          <div className={`w-[1px] h-8 bg-gradient-to-t from-white to-transparent transition-all duration-500 ${isActive ? 'scale-y-100' : 'scale-y-0'}`} />
-          <div className="w-4 h-4 rounded-full border border-white/40 flex items-center justify-center relative">
-            <div className={`w-1.5 h-1.5 bg-white rounded-full transition-transform duration-500 ${isActive ? 'scale-125' : 'scale-100'}`}></div>
-            {isActive && <div className="absolute inset-0 bg-white/40 rounded-full animate-ping"></div>}
+            <p className="text-[10.5px] text-gray-400 leading-relaxed font-medium">
+              {hotspot.content}
+            </p>
+            
+            <div className="absolute -bottom-1 -right-1 opacity-5">
+              <i className="fa-solid fa-crosshairs text-4xl text-white"></i>
+            </div>
           </div>
         </div>
       </div>
@@ -54,7 +101,7 @@ const HotspotMarker: React.FC<{ hotspot: any }> = ({ hotspot }) => {
 
 const ModelPrimitive: React.FC<{ url: string; modelRef: React.RefObject<THREE.Group> }> = ({ url, modelRef }) => {
   const { scene } = useGLTF(url);
-  const { config, mode } = useStore();
+  const { config, mode, isPlacingHotspot, addHotspot, currentProgress } = useStore();
 
   useFrame(() => {
     if (mode === 'edit' && modelRef.current) {
@@ -66,17 +113,51 @@ const ModelPrimitive: React.FC<{ url: string; modelRef: React.RefObject<THREE.Gr
     }
   });
 
+  const handlePointerDown = (e: any) => {
+    if (!isPlacingHotspot) return;
+    
+    e.stopPropagation();
+    
+    // Get the first intersection from the raycaster
+    const intersection = e.intersections?.[0];
+    if (!intersection) return;
+
+    // The point is already in world space
+    const point = intersection.point;
+    
+    // Calculate world-space normal for directionality
+    const normal = intersection.face.normal.clone();
+    const normalMatrix = new THREE.Matrix3().getNormalMatrix(intersection.object.matrixWorld);
+    normal.applyMatrix3(normalMatrix).normalize();
+
+    startTransition(() => {
+      addHotspot({
+        id: Math.random().toString(36).substr(2, 9),
+        label: 'SYSTEM COMPONENT',
+        content: 'Describe the technical specifications or aesthetic purpose of this component.',
+        position: [point.x, point.y, point.z],
+        normal: [normal.x, normal.y, normal.z],
+        visibleAt: currentProgress,
+        side: 'auto'
+      });
+    });
+  };
+
   return (
-    // @ts-ignore - group is an intrinsic element in R3F
-    <group ref={modelRef} scale={config.modelScale} position={config.modelPosition} dispose={null}>
-      {/* @ts-ignore - primitive is an intrinsic element in R3F */}
+    <group 
+      ref={modelRef} 
+      scale={config.modelScale} 
+      position={config.modelPosition} 
+      dispose={null}
+      onPointerDown={handlePointerDown}
+    >
       <primitive object={scene} />
     </group>
   );
 };
 
 export const Scene: React.FC = () => {
-  const { modelUrl, mode, config, hotspots } = useStore();
+  const { modelUrl, mode, config, hotspots, isPlacingHotspot } = useStore();
   const cameraRef = useRef<THREE.PerspectiveCamera>(null!);
   const modelRef = useRef<THREE.Group>(null!);
   const lookAtProxy = useMemo(() => new THREE.Vector3(0, 0, 0), []);
@@ -96,7 +177,6 @@ export const Scene: React.FC = () => {
       cameraRef.current.lookAt(lookAtProxy);
     }
     
-    // Update existing fog instead of creating new instances
     if (threeScene.fog) {
       (threeScene.fog as THREE.FogExp2).color.set(config.fogColor);
       (threeScene.fog as THREE.FogExp2).density = config.fogDensity;
@@ -114,28 +194,30 @@ export const Scene: React.FC = () => {
       />
       
       {mode === 'edit' && modelUrl && (
-        <OrbitControls makeDefault enableDamping dampingFactor={0.05} />
+        <OrbitControls 
+          makeDefault 
+          enableDamping 
+          dampingFactor={0.05} 
+          enabled={!isPlacingHotspot} 
+        />
       )}
       
-      {/* @ts-ignore - ambientLight is intrinsic to R3F */}
       <ambientLight intensity={config.ambientIntensity} />
-      {/* @ts-ignore - directionalLight is intrinsic to R3F */}
       <directionalLight position={[10, 10, 10]} intensity={config.directionalIntensity} castShadow />
-      {/* @ts-ignore - pointLight is intrinsic to R3F */}
       <pointLight position={[-10, -10, -10]} intensity={config.ambientIntensity * 0.5} color="#4444ff" />
 
-      {modelUrl && (
-        <React.Suspense fallback={null}>
-          <ModelPrimitive url={modelUrl} modelRef={modelRef} />
-          {hotspots.map(h => <HotspotMarker key={h.id} hotspot={h} />)}
-        </React.Suspense>
-      )}
+      <Suspense fallback={null}>
+        {modelUrl && (
+          <>
+            <ModelPrimitive url={modelUrl} modelRef={modelRef} />
+            {hotspots.map(h => <HotspotMarker key={h.id} hotspot={h} />)}
+          </>
+        )}
+      </Suspense>
 
       {config.showFloor && (
-        // @ts-ignore - group is intrinsic to R3F
         <group position={[0, -1, 0]}>
           <ContactShadows opacity={0.4} scale={20} blur={2.5} far={4.5} />
-          {/* @ts-ignore - gridHelper is intrinsic to R3F */}
           <gridHelper args={[40, 40, 0x222222, 0x111111]} />
         </group>
       )}

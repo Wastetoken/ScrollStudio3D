@@ -1,4 +1,4 @@
-import React, { Suspense, useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, Suspense, startTransition } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { useStore } from '../useStore';
 import { Scene } from './Studio/Scene';
@@ -13,26 +13,26 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger';
 gsap.registerPlugin(ScrollTrigger);
 
 const App: React.FC = () => {
-  const { mode, modelUrl, currentProgress, sections, setMode } = useStore();
+  const { mode, modelUrl, currentProgress, sections, setMode, isPlacingHotspot } = useStore();
 
   useEffect(() => {
     // Sync class for styling & height
+    const baseClass = mode === 'preview' ? 'preview-mode' : 'edit-mode';
+    const placingClass = isPlacingHotspot ? 'placing-hotspot' : '';
+    
+    document.documentElement.className = baseClass;
+    document.body.className = `${baseClass} ${placingClass}`.trim();
+
     if (mode === 'preview') {
-      document.documentElement.className = 'preview-mode';
-      document.body.className = 'preview-mode';
-      // Force ScrollTrigger to recognize the new height
       const timer = setTimeout(() => {
         ScrollTrigger.refresh();
       }, 100);
       return () => clearTimeout(timer);
     } else {
-      document.documentElement.className = 'edit-mode';
-      document.body.className = 'edit-mode';
       window.scrollTo(0, 0); 
     }
-  }, [mode]);
+  }, [mode, isPlacingHotspot]);
 
-  // Determine which sections are active based on scroll progress
   const activeSections = useMemo(() => {
     return sections.filter((s, i) => {
       const nextSection = sections[i + 1];
@@ -40,6 +40,12 @@ const App: React.FC = () => {
       return currentProgress >= s.progress && currentProgress < end;
     });
   }, [sections, currentProgress]);
+
+  const handleExitPreview = () => {
+    startTransition(() => {
+      setMode('edit');
+    });
+  };
 
   return (
     <div className={`w-full relative bg-[#050505] ${mode === 'preview' ? 'min-h-[1000vh]' : 'h-screen overflow-hidden'}`}>
@@ -56,6 +62,10 @@ const App: React.FC = () => {
           }}
           camera={{ fov: 35, position: [5, 5, 5] }}
         >
+          {/* 
+            Ensuring a robust Suspense boundary around all children 
+            to handle async loads from useGLTF without crashing the app (Error #525).
+          */}
           <Suspense fallback={null}>
             <Scene />
             <KeyframeCapturer />
@@ -82,9 +92,11 @@ const App: React.FC = () => {
             <Timeline />
           </div>
           <div className="fixed top-8 right-8 z-40 pointer-events-auto">
-             <div className="glass-panel px-6 py-3 rounded-full flex items-center gap-3 border-white/10">
-                <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse shadow-[0_0_8px_#34d399]"></div>
-                <span className="text-[10px] font-black uppercase tracking-[0.25em] text-white/90">Studio Active</span>
+             <div className={`glass-panel px-6 py-3 rounded-full flex items-center gap-3 border-white/10 transition-colors ${isPlacingHotspot ? 'bg-emerald-500/20 border-emerald-500/50' : ''}`}>
+                <div className={`w-1.5 h-1.5 rounded-full animate-pulse shadow-[0_0_8px_currentColor] ${isPlacingHotspot ? 'bg-emerald-400 text-emerald-400' : 'bg-white text-white'}`}></div>
+                <span className="text-[10px] font-black uppercase tracking-[0.25em] text-white/90">
+                  {isPlacingHotspot ? 'Placement Active' : 'Studio Active'}
+                </span>
              </div>
           </div>
         </div>
@@ -137,7 +149,7 @@ const App: React.FC = () => {
 
           <div className="fixed top-8 left-8 z-50 pointer-events-auto">
              <button 
-              onClick={() => setMode('edit')}
+              onClick={handleExitPreview}
               className="bg-white hover:bg-gray-200 text-black px-8 py-4 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all shadow-2xl flex items-center gap-4 active:scale-95 group"
              >
                <i className="fa-solid fa-chevron-left group-hover:-translate-x-1 transition-transform"></i> Exit Viewer

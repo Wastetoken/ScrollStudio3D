@@ -8,6 +8,7 @@ if (!rootElement) {
 }
 
 const root = ReactDOM.createRoot(rootElement);
-// StrictMode is removed as it can cause duplicate suspension and state update issues (Error #525) 
-// especially when integrating complex 3D libraries like React Three Fiber with concurrent features.
+// Concurrent rendering is enabled by default with createRoot. 
+// StrictMode is omitted to prevent redundant suspension/unsuspension cycles 
+// with useGLTF which can lead to React Error #525.
 root.render(<App />);
