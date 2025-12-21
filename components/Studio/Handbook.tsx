@@ -1,15 +1,16 @@
+
 import React, { useState } from 'react';
 import { useStore } from '../../useStore';
 
-const TutorialSection: React.FC<{ title: string; children: React.ReactNode; icon: string }> = ({ title, children, icon }) => (
-  <div className="space-y-4">
+const TutorialSection: React.FC<{ title: string; children: React.ReactNode; icon: string; accent?: string }> = ({ title, children, icon, accent = "text-white" }) => (
+  <div className="space-y-4 animate-in fade-in slide-in-from-left-4 duration-500">
     <div className="flex items-center gap-3">
-      <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center">
-        <i className={`fa-solid ${icon} text-black text-sm`}></i>
+      <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center shadow-inner">
+        <i className={`fa-solid ${icon} ${accent} text-sm`}></i>
       </div>
-      <h3 className="text-sm font-black uppercase tracking-widest text-white italic">{title}</h3>
+      <h3 className="text-sm font-black uppercase tracking-[0.2em] text-white italic">{title}</h3>
     </div>
-    <div className="text-[11px] leading-relaxed text-gray-400 space-y-3 pl-11">
+    <div className="text-[11px] leading-relaxed text-gray-400 space-y-3 pl-14">
       {children}
     </div>
   </div>
@@ -17,102 +18,156 @@ const TutorialSection: React.FC<{ title: string; children: React.ReactNode; icon
 
 export const Handbook: React.FC = () => {
   const { showHandbook, setShowHandbook } = useStore();
-  const [activeTab, setActiveTab] = useState<'basics' | 'cinematics' | 'workflow'>('basics');
+  const [activeTab, setActiveTab] = useState<'directing' | 'optics' | 'atmosphere' | 'fx'>('directing');
 
   if (!showHandbook) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 pointer-events-auto">
+    <div className="fixed inset-0 z-[1000] flex items-center justify-center p-6 pointer-events-auto">
       <div 
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/90 backdrop-blur-xl"
         onClick={() => setShowHandbook(false)}
       />
       
-      <div className="relative w-full max-w-4xl max-h-[85vh] glass-panel rounded-[2.5rem] flex flex-col overflow-hidden border-white/20 shadow-[0_0_100px_rgba(0,0,0,0.8)] animate-in fade-in zoom-in-95 duration-300">
-        <div className="p-8 border-b border-white/10 flex justify-between items-center bg-white/5">
-          <div className="space-y-1">
-             <div className="text-[10px] font-black uppercase tracking-[0.4em] text-white/40">Technical Documentation</div>
-             <h2 className="text-3xl font-black italic tracking-tighter text-white uppercase">ScrollStudio Mastery</h2>
+      <div className="relative w-full max-w-5xl max-h-[90vh] glass-panel rounded-[3rem] flex flex-col overflow-hidden border-white/20 shadow-[0_0_120px_rgba(0,0,0,1)] animate-in fade-in zoom-in-95 duration-500">
+        
+        {/* Header */}
+        <div className="p-10 border-b border-white/10 flex justify-between items-start bg-white/5">
+          <div className="space-y-2">
+             <div className="flex items-center gap-2">
+               <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
+               <div className="text-[10px] font-black uppercase tracking-[0.4em] text-white/40">Studio Academy v2.5</div>
+             </div>
+             <h2 className="text-4xl font-black italic tracking-tighter text-white uppercase leading-none">The Director's Manifesto</h2>
+             <p className="text-xs text-white/20 font-medium">Mastering the art of spatial narrative and cinematic optics.</p>
           </div>
           <button 
             onClick={() => setShowHandbook(false)}
-            className="w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors"
+            className="w-12 h-12 rounded-full bg-white/5 hover:bg-white text-white hover:text-black flex items-center justify-center transition-all border border-white/10"
           >
-            <i className="fa-solid fa-xmark text-white"></i>
+            <i className="fa-solid fa-xmark"></i>
           </button>
         </div>
 
-        <div className="flex-1 overflow-hidden flex">
-          <div className="w-48 border-r border-white/10 p-4 space-y-2 bg-black/20">
+        <div className="flex-1 overflow-hidden flex flex-col md:flex-row">
+          {/* Sidebar Navigation */}
+          <div className="w-full md:w-64 border-r border-white/10 p-6 space-y-2 bg-black/40 shrink-0">
             {[
-              { id: 'basics', label: 'Core Basics', icon: 'fa-cube' },
-              { id: 'cinematics', label: 'Cinematics', icon: 'fa-clapperboard' },
-              { id: 'workflow', label: 'The Workflow', icon: 'fa-code-branch' }
+              { id: 'directing', label: 'Directing', icon: 'fa-video', desc: 'Camera & Paths' },
+              { id: 'optics', label: 'Optics', icon: 'fa-circle-dot', desc: 'Lenses & Bokeh' },
+              { id: 'atmosphere', label: 'Atmosphere', icon: 'fa-cloud-sun', desc: 'Light & Exposure' },
+              { id: 'fx', label: 'Visual FX', icon: 'fa-wand-magic-sparkles', desc: 'The Final Polish' }
             ].map(tab => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as any)}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === tab.id ? 'bg-white text-black' : 'text-gray-500 hover:bg-white/5'}`}
+                className={`w-full flex flex-col gap-1 px-5 py-4 rounded-2xl transition-all text-left border ${activeTab === tab.id ? 'bg-white border-white text-black shadow-[0_10px_30px_rgba(255,255,255,0.2)]' : 'bg-transparent border-transparent text-gray-500 hover:bg-white/5 hover:border-white/10'}`}
               >
-                <i className={`fa-solid ${tab.icon} text-xs`}></i>
-                <span className="text-[10px] font-black uppercase tracking-widest">{tab.label}</span>
+                <div className="flex items-center gap-3">
+                  <i className={`fa-solid ${tab.icon} text-xs`}></i>
+                  <span className="text-[10px] font-black uppercase tracking-widest">{tab.label}</span>
+                </div>
+                <span className={`text-[9px] font-bold opacity-40 ml-6 ${activeTab === tab.id ? 'text-black' : ''}`}>{tab.desc}</span>
               </button>
             ))}
           </div>
 
-          <div className="flex-1 overflow-y-auto p-10 no-scrollbar space-y-10 bg-gradient-to-br from-transparent to-white/[0.02]">
-            {activeTab === 'basics' && (
-              <>
-                <TutorialSection title="Camera Control" icon="fa-video">
-                  <p>Navigation is handled via standard 3D viewport controls:</p>
-                  <ul className="list-disc space-y-2">
-                    <li><b className="text-white">Rotate:</b> Left-click and drag anywhere in the scene.</li>
-                    <li><b className="text-white">Pan:</b> Right-click and drag to slide the viewport.</li>
-                    <li><b className="text-white">Zoom:</b> Use the mouse wheel to move closer or further.</li>
+          {/* Content Area */}
+          <div className="flex-1 overflow-y-auto p-12 no-scrollbar space-y-12 bg-gradient-to-br from-transparent to-white/[0.02]">
+            
+            {activeTab === 'directing' && (
+              <div className="space-y-10">
+                <TutorialSection title="Camera Pathing (The Snapshot)" icon="fa-camera-retro" accent="text-emerald-400">
+                  <p>ScrollStudio uses <b className="text-white">Non-Linear Spline Interpolation</b>. To create a movement:</p>
+                  <ul className="list-disc pl-4 space-y-2">
+                    <li>Find your angle using <b className="text-white">Orbit (LMB)</b> and <b className="text-white">Pan (RMB)</b>.</li>
+                    <li>Move the timeline playhead to your desired scroll percentage.</li>
+                    <li>Hit the <b className="text-white">Capture</b> icon. The engine creates a keyframe.</li>
+                  </ul>
+                  <p>The camera will now smoothly travel between all captured snapshots as you scroll.</p>
+                </TutorialSection>
+
+                <TutorialSection title="FOV (Field of View)" icon="fa-magnifying-glass" accent="text-blue-400">
+                  <p><b className="text-white">Wide vs. Telephoto:</b> FOV determines the camera's perspective. 
+                     A high FOV (e.g., 60°) creates a wide-angle, epic sense of scale but can distort edges. 
+                     A low FOV (e.g., 20°) acts like a zoom lens, flattening the image and bringing focus to technical details.</p>
+                  <p><i className="fa-solid fa-circle-info mr-2 opacity-50"></i> You can capture different FOVs in different keyframes to create dynamic zoom-ins during movement.</p>
+                </TutorialSection>
+
+                <TutorialSection title="Spline Alpha (Movement Logic)" icon="fa-wave-square" accent="text-purple-400">
+                  <p>Located in the <b className="text-white">Path</b> tab, Spline Alpha controls the "tension" of the camera path.</p>
+                  <ul className="list-disc pl-4 space-y-2">
+                    <li><b className="text-white">0.0 (Centripetal):</b> Tight, more direct paths between points.</li>
+                    <li><b className="text-white">0.5 (Catmull-Rom):</b> The standard for cinema. Balanced, natural curves.</li>
+                    <li><b className="text-white">1.0 (Chordal):</b> Extremely smooth, sweeping arcs—ideal for orbiting large products.</li>
                   </ul>
                 </TutorialSection>
-
-                <TutorialSection title="Hotspots Explained" icon="fa-location-dot">
-                  <p><b className="text-white">What is a Hotspot?</b> Unlike Story Beats which stay in the center of the screen, a <b className="text-white">Hotspot</b> is a physical marker pinned to a specific point in 3D space on your model.</p>
-                  <p><b className="text-white">Anchoring:</b> When you click "Pin Hotspot Here", the engine captures the current <b className="text-white">Camera Target</b> (the point you are rotating around). This ensures the label stays exactly on that mechanical part as the camera moves.</p>
-                  <ul className="list-disc space-y-2">
-                    <li><b className="text-white">Visibility:</b> Hotspots only appear when the user scrolls near the progress percentage where you created them.</li>
-                    <li><b className="text-white">Detailing:</b> Use these for technical callouts like "Air Intake", "Engine Specs", or "Material Finish".</li>
-                  </ul>
-                </TutorialSection>
-              </>
+              </div>
             )}
 
-            {activeTab === 'cinematics' && (
-              <>
-                <TutorialSection title="Cinematic Lenses" icon="fa-camera-retro">
-                  <p>Adjust <b className="text-white">FOV (Field of View)</b> to change the perspective. 15mm is wide-angle (epic), while 80mm is telephoto (intimate/product focus).</p>
-                  <p>Use <b className="text-white">Aperture</b> to create "Bokeh" (background blur). This is critical for making your model feel like it's being filmed with a professional camera.</p>
+            {activeTab === 'optics' && (
+              <div className="space-y-10">
+                <TutorialSection title="Aperture (The Bokeh Effect)" icon="fa-circle-dot" accent="text-orange-400">
+                  <p>Aperture controls the <b className="text-white">Depth of Field (DOF)</b>. A larger aperture (e.g., 0.1) results in a shallow depth of field, blurring the background and foreground while keeping a specific point in focus.</p>
+                  <p><b className="text-white">Creative Use:</b> Use shallow DOF to guide the viewer's eye to specific mechanical parts or labels while softening the rest of the scene.</p>
                 </TutorialSection>
-              </>
+
+                <TutorialSection title="Focus Distance" icon="fa-crosshairs" accent="text-red-400">
+                  <p>This is the exact distance from the camera lens to the point that should be sharp. If your model is 10 units away, set your Focus Distance to 10.</p>
+                  <p><i className="fa-solid fa-lightbulb mr-2 text-yellow-400"></i> Tip: Use the <b className="text-white">Bokeh Scale</b> to determine how "creamy" or exaggerated the background blur should be.</p>
+                </TutorialSection>
+              </div>
             )}
 
-            {activeTab === 'workflow' && (
-              <>
-                <TutorialSection title="Step-by-Step Production" icon="fa-code-branch">
-                  <ol className="list-decimal space-y-4">
-                    <li><b className="text-white">Block the Path:</b> Create your keyframes from 0% to 100%. Ensure the model stays in view.</li>
-                    <li><b className="text-white">Add Narrative:</b> Create "Story Beats" to give the viewer context.</li>
-                    <li><b className="text-white">Detailing:</b> Use "Hotspots" to call out specific technical details directly on the model's geometry.</li>
-                    <li><b className="text-white">Export:</b> Use the Project tab to download your JSON. Hand this JSON to a developer to build your live site.</li>
-                  </ol>
+            {activeTab === 'atmosphere' && (
+              <div className="space-y-10">
+                <TutorialSection title="Tone Mapping & Exposure" icon="fa-brightness" accent="text-yellow-400">
+                  <p><b className="text-white">Exposure:</b> This controls the overall brightness of the scene's virtual sensor. 
+                     High exposure (2.0+) feels like a bright, over-exposed studio. 
+                     Low exposure (0.5) creates a dark, "low-key" dramatic mood.</p>
+                  <p>The engine uses <b className="text-white">ACES Filmic Tone Mapping</b>, ensuring that highlights don't "clip" to white too aggressively.</p>
                 </TutorialSection>
-              </>
+
+                <TutorialSection title="Volumetric Fog" icon="fa-cloud" accent="text-cyan-400">
+                  <p>Fog adds atmospheric depth. It helps the viewer understand the scale of the world. 
+                     By matching the <b className="text-white">Fog Color</b> to your <b className="text-white">Background Color</b>, you can make the edges of your 3D world fade into infinity.</p>
+                </TutorialSection>
+
+                <TutorialSection title="Environment Presets" icon="fa-mountain-sun" accent="text-rose-400">
+                  <p>In the <b className="text-white">Env</b> tab, you can swap between lighting rigs. <b className="text-white">Studio</b> is neutral, <b className="text-white">City</b> adds blue/orange highlights, and <b className="text-white">Night</b> focuses on high-contrast rim lighting.</p>
+                </TutorialSection>
+              </div>
             )}
+
+            {activeTab === 'fx' && (
+              <div className="space-y-10">
+                <TutorialSection title="Bloom (HDR Glow)" icon="fa-sun" accent="text-emerald-400">
+                  <p>Bloom makes highlights and <b className="text-white">Emissive</b> materials glow. 
+                     Adjust the <b className="text-white">Threshold</b> to decide which parts of the model trigger the glow, and <b className="text-white">Intensity</b> to control how far that light spreads.</p>
+                </TutorialSection>
+
+                <TutorialSection title="Chromatic Aberration" icon="fa-eye" accent="text-indigo-400">
+                  <p>This mimics a real-world lens imperfection where colors bleed at the edges of the frame. 
+                     A subtle amount (0.002) adds a sense of <b className="text-white">Photorealism</b> and "weight" to the digital render.</p>
+                </TutorialSection>
+
+                <TutorialSection title="Vignette" icon="fa-circle" accent="text-gray-400">
+                  <p>Vignetting darkens the corners of the frame. This is a classic cinematic technique to keep the viewer's focus centered on the product.</p>
+                </TutorialSection>
+              </div>
+            )}
+
           </div>
         </div>
 
-        <div className="p-6 bg-white flex justify-center border-t border-white/10">
+        {/* Footer */}
+        <div className="p-8 bg-white flex justify-center border-t border-white/10 shrink-0">
            <button 
             onClick={() => setShowHandbook(false)}
-            className="px-10 py-3 bg-black text-white rounded-xl text-[10px] font-black uppercase tracking-[0.3em] hover:scale-105 transition-transform"
+            className="px-12 py-4 bg-black text-white rounded-2xl text-[11px] font-black uppercase tracking-[0.4em] hover:scale-105 active:scale-95 transition-all shadow-[0_20px_40px_rgba(0,0,0,0.3)] flex items-center gap-3"
            >
-             Start Creating
+             Initialize Production
+             <i className="fa-solid fa-arrow-right text-[10px]"></i>
            </button>
         </div>
       </div>

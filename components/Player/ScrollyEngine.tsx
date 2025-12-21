@@ -1,5 +1,5 @@
 
-import React, { useMemo, Suspense, useState, useLayoutEffect, Component, ErrorInfo, ReactNode, useEffect } from 'react';
+import React, { useMemo, Suspense, useState, useLayoutEffect, ErrorInfo, ReactNode, useEffect } from 'react';
 import * as THREE from 'three';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { 
@@ -9,9 +9,11 @@ import {
   Html,
   ScrollControls,
   useScroll,
-  Preload
+  Preload,
+  ContactShadows,
+  MeshReflectorMaterial
 } from '@react-three/drei';
-import { EffectComposer, Bloom, Vignette } from '@react-three/postprocessing';
+import { EffectComposer, Bloom, Vignette, DepthOfField, ChromaticAberration } from '@react-three/postprocessing';
 import { ProjectSchema, SceneChapter, Hotspot } from '../../types';
 
 interface EngineProps {
@@ -21,21 +23,17 @@ interface EngineProps {
 /**
  * PRODUCTION ERROR BOUNDARY
  */
-// Fix: Define explicit interfaces for props and state to resolve type inference issues in the class component.
 interface EngineErrorBoundaryProps {
-  children: ReactNode;
+  children?: ReactNode;
 }
 
 interface EngineErrorBoundaryState {
   hasError: boolean;
+  errorDetail?: string;
 }
 
-// Fix: Use React.Component with explicit generic parameters to ensure 'state' and 'props' are correctly typed on 'this'.
 class EngineErrorBoundary extends React.Component<EngineErrorBoundaryProps, EngineErrorBoundaryState> {
-  constructor(props: EngineErrorBoundaryProps) {
-    super(props);
-    this.state = { hasError: false };
-  }
+  state: EngineErrorBoundaryState = { hasError: false };
   
   static getDerivedStateFromError() { 
     return { hasError: true }; 
@@ -43,16 +41,19 @@ class EngineErrorBoundary extends React.Component<EngineErrorBoundaryProps, Engi
   
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error("ScrollyEngine Critical Failure:", error, errorInfo);
+    this.setState({ errorDetail: error.message });
   }
   
   render() {
-    // Fix: 'state' and 'props' now correctly resolve due to the generic parameters above.
     if (this.state.hasError) {
       return (
         <div className="flex flex-col items-center justify-center h-full bg-black text-white p-10 text-center">
           <i className="fa-solid fa-triangle-exclamation text-red-500 text-4xl mb-4"></i>
           <h2 className="text-xl font-black uppercase italic tracking-tighter">Engine Stalled</h2>
           <p className="text-xs opacity-50 max-w-xs mt-2">Failed to initialize 3D context. Check asset URLs and VRAM limits.</p>
+          {this.state.errorDetail && (
+            <p className="text-[8px] font-mono opacity-30 mt-4 max-w-md break-all">{this.state.errorDetail}</p>
+          )}
           <button onClick={() => window.location.reload()} className="mt-6 px-8 py-3 bg-white text-black text-[10px] font-black uppercase rounded-full">Restart Core</button>
         </div>
       );
@@ -105,16 +106,18 @@ const IndexedChapterModel: React.FC<{ chapter: SceneChapter }> = ({ chapter }) =
     meshRegistry.forEach((mesh, name) => {
       const settings = overrides[name];
       if (settings) {
-        const mat = Array.isArray(mesh.material) ? mesh.material[0] : mesh.material;
-        if (mat instanceof THREE.MeshStandardMaterial) {
-          mat.color.set(settings.color);
-          mat.emissive.set(settings.emissive);
-          mat.emissiveIntensity = settings.emissiveIntensity;
-          mat.metalness = settings.metalness;
-          mat.roughness = settings.roughness;
-          mat.wireframe = !!settings.wireframe;
-          mat.needsUpdate = true;
-        }
+        const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+        mats.forEach((mat) => {
+           if (mat instanceof THREE.MeshStandardMaterial) {
+            mat.color.set(settings.color);
+            mat.emissive.set(settings.emissive);
+            mat.emissiveIntensity = settings.emissiveIntensity;
+            mat.metalness = settings.metalness;
+            mat.roughness = settings.roughness;
+            mat.wireframe = !!settings.wireframe;
+            mat.needsUpdate = true;
+          }
+        });
       }
     });
   }, [chapter.id, meshRegistry, chapter.materialOverrides]);
@@ -166,11 +169,6 @@ const ScrollyRig: React.FC<{ chapters: SceneChapter[]; isMobile: boolean }> = ({
     [activeChapterId, chapters]
   );
 
-  // PRODUCTION ANALYTICS HOOK
-  useEffect(() => {
-    // console.log(`[ANALYTICS] Chapter Entry: ${activeChapterId}`);
-  }, [activeChapterId]);
-
   useLayoutEffect(() => {
     if (gl) {
       gl.toneMappingExposure = currentChapter.environment.exposure ?? 1.0;
@@ -180,29 +178,49 @@ const ScrollyRig: React.FC<{ chapters: SceneChapter[]; isMobile: boolean }> = ({
   const curves = useMemo(() => {
     const path = currentChapter.cameraPath;
     if (path.length < 2) return null;
-    return {
-      pos: new THREE.CatmullRomCurve3(path.map(k => new THREE.Vector3(...k.position))),
-      target: new THREE.CatmullRomCurve3(path.map(k => new THREE.Vector3(...k.target))),
-      keyframes: path
-    };
-  }, [currentChapter.id, currentChapter.cameraPath]);
+    
+    const splineAlpha = currentChapter.environment.splineAlpha || 0.5;
+    const curveType = splineAlpha === 0 ? 'centripetal' : splineAlpha === 1 ? 'chordal' : 'catmullrom';
+
+    const pos = new THREE.CatmullRomCurve3(path.map(k => new THREE.Vector3(...k.position)));
+    pos.curveType = curveType;
+    
+    const target = new THREE.CatmullRomCurve3(path.map(k => new THREE.Vector3(...k.target)));
+    target.curveType = curveType;
+
+    return { pos, target, keyframes: path };
+  }, [currentChapter.id, currentChapter.cameraPath, currentChapter.environment.splineAlpha]);
 
   useFrame(() => {
     const progress = scroll.offset;
+    // Find active chapter based on overall scroll progress
     const found = chapters.find(c => progress >= c.startProgress && progress <= c.endProgress);
     if (found && found.id !== activeChapterId) {
       setActiveChapterId(found.id);
     }
 
-    if (!curves) return;
+    if (!curves) {
+      // Static fallback if only one keyframe exists
+      if (currentChapter.cameraPath.length === 1) {
+        const kf = currentChapter.cameraPath[0];
+        camera.position.set(...kf.position);
+        camera.lookAt(...kf.target);
+        (camera as THREE.PerspectiveCamera).fov = kf.fov;
+        (camera as THREE.PerspectiveCamera).updateProjectionMatrix();
+      }
+      return;
+    }
 
+    // Calculate normalized progress within the active chapter
     const duration = currentChapter.endProgress - currentChapter.startProgress;
     const localT = THREE.MathUtils.clamp((progress - currentChapter.startProgress) / (duration || 1), 0, 1);
 
+    // Camera Interpolation
     camera.position.copy(curves.pos.getPointAt(localT));
     lookAtTarget.copy(curves.target.getPointAt(localT));
     camera.lookAt(lookAtTarget);
 
+    // FOV Interpolation
     const kfs = curves.keyframes;
     const idx = kfs.findIndex((kf, i) => i === kfs.length - 1 || localT < kfs[i + 1].progress);
     const kfA = kfs[idx];
@@ -215,12 +233,20 @@ const ScrollyRig: React.FC<{ chapters: SceneChapter[]; isMobile: boolean }> = ({
 
   return (
     <>
-      <PerspectiveCamera makeDefault position={[0, 0, 20]} />
+      <PerspectiveCamera makeDefault fov={currentChapter.environment.defaultFov} position={[0, 0, 20]} />
       <color attach="background" args={[currentChapter.environment.backgroundColor]} />
+      <fog attach="fog" args={[currentChapter.environment.fogColor, 0, 100 / (currentChapter.environment.fogDensity || 0.001)]} />
       <ambientLight intensity={currentChapter.environment.ambientIntensity} />
       <directionalLight position={[10, 10, 5]} intensity={currentChapter.environment.directionalIntensity} />
       
-      <Suspense fallback={null}>
+      <Suspense fallback={
+        <Html center>
+           <div className="flex flex-col items-center gap-4">
+              <div className="w-6 h-6 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
+              <span className="text-[10px] font-black uppercase tracking-widest opacity-40">Loading Assets...</span>
+           </div>
+        </Html>
+      }>
         <IndexedChapterModel chapter={currentChapter} />
         <Environment preset={currentChapter.environment.envPreset as any} />
         {currentChapter.spatialAnnotations.map(h => (
@@ -229,14 +255,42 @@ const ScrollyRig: React.FC<{ chapters: SceneChapter[]; isMobile: boolean }> = ({
         <Preload all />
       </Suspense>
 
+      {currentChapter.environment.showFloor && (
+        <>
+          <ContactShadows opacity={0.3} scale={40} blur={2.5} far={10} color="#000000" position={[0, -0.01, 0]} />
+          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.02, 0]}>
+            <planeGeometry args={[100, 100]} />
+            <MeshReflectorMaterial
+              blur={[300, 100]}
+              resolution={1024}
+              mixBlur={1}
+              mixStrength={40}
+              roughness={1}
+              depthScale={1.2}
+              minDepthThreshold={0.4}
+              maxDepthThreshold={1.4}
+              color="#050505"
+              metalness={0.5}
+              mirror={0}
+            />
+          </mesh>
+        </>
+      )}
+
       <EffectComposer enableNormalPass={false}>
-        {!isMobile && (
-          <Bloom 
-            intensity={currentChapter.environment.bloomIntensity} 
-            luminanceThreshold={currentChapter.environment.bloomThreshold} 
-            mipmapBlur 
-          />
-        )}
+        <Bloom 
+          intensity={currentChapter.environment.bloomIntensity} 
+          luminanceThreshold={currentChapter.environment.bloomThreshold || 0.9} 
+          mipmapBlur 
+        />
+        <DepthOfField 
+          focusDistance={currentChapter.environment.focusDistance} 
+          focalLength={currentChapter.environment.aperture || 0.2} 
+          bokehScale={currentChapter.environment.bokehScale} 
+        />
+        <ChromaticAberration 
+          offset={new THREE.Vector2(currentChapter.environment.chromaticAberration, currentChapter.environment.chromaticAberration)} 
+        />
         <Vignette darkness={isMobile ? currentChapter.environment.vignetteDarkness * 0.7 : currentChapter.environment.vignetteDarkness} />
       </EffectComposer>
     </>
@@ -274,27 +328,37 @@ const StoryOverlay: React.FC<{ chapters: SceneChapter[] }> = ({ chapters }) => {
               display: 'flex',
               flexDirection: 'column',
               justifyContent: 'center',
-              alignItems: 'center',
+              alignItems: beat.style.textAlign === 'center' ? 'center' : (beat.style.textAlign === 'right' ? 'flex-end' : 'flex-start'),
               opacity,
               transform: `translateY(${(1 - opacity) * 30}px)`,
               transition: 'opacity 0.8s ease-out, transform 0.8s ease-out',
-              textAlign: 'center',
-              padding: '2rem'
+              textAlign: beat.style.textAlign,
+              padding: '10vw'
             }}
           >
             <div style={{ 
-              maxWidth: '850px', 
-              background: 'rgba(0,0,0,0.2)', 
-              backdropFilter: 'blur(40px)', 
+              maxWidth: beat.style.layout === 'full' ? '850px' : '500px', 
+              background: beat.style.theme === 'glass' ? 'rgba(0,0,0,0.2)' : 'transparent', 
+              backdropFilter: beat.style.theme === 'glass' ? `blur(${beat.style.backdropBlur}px)` : 'none', 
               padding: '4rem', 
               borderRadius: '3.5rem', 
-              border: '1px solid rgba(255,255,255,0.03)',
-              boxShadow: '0 50px 100px rgba(0,0,0,0.4)'
+              border: beat.style.theme === 'glass' ? '1px solid rgba(255,255,255,0.03)' : 'none',
+              boxShadow: beat.style.theme === 'glass' ? '0 50px 100px rgba(0,0,0,0.4)' : 'none'
             }}>
-              <h2 style={{ fontSize: 'clamp(2rem, 8vw, 6rem)', fontWeight: 900, textTransform: 'uppercase', lineHeight: 0.85, marginBottom: '1.5rem', fontStyle: 'italic', letterSpacing: '-0.05em', color: 'white' }}>
+              <h2 style={{ 
+                fontSize: 'clamp(2rem, 8vw, 6rem)', 
+                fontWeight: beat.style.fontWeight === 'black' ? 900 : 700, 
+                textTransform: 'uppercase', 
+                lineHeight: 0.85, 
+                marginBottom: '1.5rem', 
+                fontStyle: 'italic', 
+                letterSpacing: '-0.05em', 
+                color: beat.style.titleColor,
+                textShadow: beat.style.textGlow ? `0 0 40px ${beat.style.titleColor}88` : 'none'
+              }}>
                 {beat.title}
               </h2>
-              <p style={{ fontSize: '1.15rem', lineHeight: 1.6, opacity: 0.6, maxWidth: '500px', margin: '0 auto', color: 'white' }}>
+              <p style={{ fontSize: '1.15rem', lineHeight: 1.6, opacity: 0.6, maxWidth: '500px', margin: beat.style.textAlign === 'center' ? '0 auto' : '0', color: beat.style.descriptionColor }}>
                 {beat.description}
               </p>
             </div>
@@ -310,7 +374,6 @@ export const ScrollyEngine: React.FC<EngineProps> = ({ data }) => {
 
   const isMobile = useMobile();
   
-  // PREFERS REDUCED MOTION CHECK
   const prefersReducedMotion = useMemo(() => 
     typeof window !== 'undefined' ? window.matchMedia('(prefers-reduced-motion: reduce)').matches : false
   , []);

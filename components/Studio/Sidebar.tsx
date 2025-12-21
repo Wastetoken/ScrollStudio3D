@@ -158,7 +158,9 @@ export const Sidebar: React.FC = () => {
                            <div className="w-6 h-6 rounded-lg bg-white/10 flex items-center justify-center text-[8px] font-mono text-white/60">{i+1}</div>
                            <div className="flex flex-col">
                               <span className="text-[10px] font-black text-white/80">POS_{(kf.progress * 100).toFixed(0)}%</span>
-                              <span className="text-[8px] text-white/20 font-mono">FOV: {kf.fov.toFixed(0)}</span>
+                              <div className="flex gap-2 text-[8px] text-white/20 font-mono">
+                                <span>FOV: {kf.fov.toFixed(0)}</span>
+                              </div>
                            </div>
                         </div>
                         <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -173,6 +175,10 @@ export const Sidebar: React.FC = () => {
                   <div className="space-y-2">
                     <div className="flex justify-between text-[9px] uppercase font-black text-white/30 tracking-widest">Spline Smoothness <span>{activeChapter.environment.splineAlpha.toFixed(2)}</span></div>
                     <input type="range" min="0" max="1" step="0.01" value={activeChapter.environment.splineAlpha} onChange={e => setConfig({ splineAlpha: parseFloat(e.target.value) })} className="w-full h-1 bg-white/10 appearance-none accent-white cursor-pointer" />
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-[9px] uppercase font-black text-white/30 tracking-widest">Default FOV <span>{activeChapter.environment.defaultFov}</span></div>
+                    <input type="range" min="5" max="120" step="1" value={activeChapter.environment.defaultFov} onChange={e => setConfig({ defaultFov: parseInt(e.target.value) })} className="w-full h-1 bg-white/10 appearance-none accent-white cursor-pointer" />
                   </div>
                </div>
             </div>
@@ -314,7 +320,8 @@ export const Sidebar: React.FC = () => {
           )}
 
           {activeTab === 'scene' && activeChapter && (
-            <div className="space-y-8 animate-in fade-in duration-300">
+            <div className="space-y-8 animate-in fade-in duration-300 pb-10">
+              {/* Environment Basics */}
               <div className="space-y-4">
                 <div className="space-y-2">
                   <label className="text-[9px] uppercase font-black text-white/30 tracking-widest">Environment Mood</label>
@@ -323,11 +330,58 @@ export const Sidebar: React.FC = () => {
                   </select>
                 </div>
                 <div className="space-y-3">
-                  <div className="flex justify-between text-[9px] uppercase font-black text-white/30 tracking-widest">Atmospheric Exposure <span>{activeChapter.environment.exposure}</span></div>
+                  <div className="flex justify-between text-[9px] uppercase font-black text-white/30 tracking-widest">Global Exposure <span>{activeChapter.environment.exposure.toFixed(2)}</span></div>
                   <input type="range" min="0.1" max="5" step="0.1" value={activeChapter.environment.exposure} onChange={e => setConfig({ exposure: parseFloat(e.target.value) })} className="w-full h-1 bg-white/10 appearance-none accent-white cursor-pointer" />
                 </div>
               </div>
+
+              {/* Optics & Lens */}
               <div className="pt-6 border-t border-white/10 space-y-4">
+                <h6 className="text-[9px] font-black uppercase tracking-widest text-emerald-400">Cinematic Optics</h6>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-[9px] uppercase font-black text-white/30 tracking-widest">Aperture (Bokeh) <span>{activeChapter.environment.aperture.toFixed(3)}</span></div>
+                    <input type="range" min="0.001" max="0.5" step="0.001" value={activeChapter.environment.aperture} onChange={e => setConfig({ aperture: parseFloat(e.target.value) })} className="w-full h-1 bg-white/10 appearance-none accent-white cursor-pointer" />
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-[9px] uppercase font-black text-white/30 tracking-widest">Focus Distance <span>{activeChapter.environment.focusDistance.toFixed(2)}</span></div>
+                    <input type="range" min="0.1" max="100" step="0.1" value={activeChapter.environment.focusDistance} onChange={e => setConfig({ focusDistance: parseFloat(e.target.value) })} className="w-full h-1 bg-white/10 appearance-none accent-white cursor-pointer" />
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-[9px] uppercase font-black text-white/30 tracking-widest">Bokeh Scale <span>{activeChapter.environment.bokehScale.toFixed(1)}</span></div>
+                    <input type="range" min="0" max="20" step="0.5" value={activeChapter.environment.bokehScale} onChange={e => setConfig({ bokehScale: parseFloat(e.target.value) })} className="w-full h-1 bg-white/10 appearance-none accent-white cursor-pointer" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Atmosphere & FX */}
+              <div className="pt-6 border-t border-white/10 space-y-4">
+                <h6 className="text-[9px] font-black uppercase tracking-widest text-blue-400">Atmosphere & FX</h6>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-[9px] uppercase font-black text-white/30 tracking-widest">Fog Density <span>{activeChapter.environment.fogDensity.toFixed(3)}</span></div>
+                    <input type="range" min="0" max="0.5" step="0.005" value={activeChapter.environment.fogDensity} onChange={e => setConfig({ fogDensity: parseFloat(e.target.value) })} className="w-full h-1 bg-white/10 appearance-none accent-white cursor-pointer" />
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-[9px] uppercase font-black text-white/30 tracking-widest">Bloom Intensity <span>{activeChapter.environment.bloomIntensity.toFixed(1)}</span></div>
+                    <input type="range" min="0" max="10" step="0.1" value={activeChapter.environment.bloomIntensity} onChange={e => setConfig({ bloomIntensity: parseFloat(e.target.value) })} className="w-full h-1 bg-white/10 appearance-none accent-white cursor-pointer" />
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-[9px] uppercase font-black text-white/30 tracking-widest">Lens Color Bleed <span>{activeChapter.environment.chromaticAberration.toFixed(4)}</span></div>
+                    <input type="range" min="0" max="0.02" step="0.0005" value={activeChapter.environment.chromaticAberration} onChange={e => setConfig({ chromaticAberration: parseFloat(e.target.value) })} className="w-full h-1 bg-white/10 appearance-none accent-white cursor-pointer" />
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-[9px] uppercase font-black text-white/30 tracking-widest">Vignette <span>{activeChapter.environment.vignetteDarkness.toFixed(1)}</span></div>
+                    <input type="range" min="0" max="5" step="0.1" value={activeChapter.environment.vignetteDarkness} onChange={e => setConfig({ vignetteDarkness: parseFloat(e.target.value) })} className="w-full h-1 bg-white/10 appearance-none accent-white cursor-pointer" />
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-6 border-t border-white/10 space-y-4">
+                <div className="space-y-2">
+                   <span className="text-[8px] uppercase font-black text-white/20 tracking-widest">BG Color / Fog Color</span>
+                   <input type="color" value={activeChapter.environment.backgroundColor} onChange={e => setConfig({ backgroundColor: e.target.value, fogColor: e.target.value })} className="w-full h-10 bg-transparent cursor-pointer rounded-xl overflow-hidden border-0" />
+                </div>
                 <button onClick={() => setConfig({ showFloor: !activeChapter.environment.showFloor })} className={`w-full py-4 rounded-2xl text-[10px] font-black uppercase transition-all ${activeChapter.environment.showFloor ? 'bg-white text-black shadow-lg' : 'bg-white/5 text-white/30 border border-white/5'}`}>
                   {activeChapter.environment.showFloor ? 'Hide Ground Reflector' : 'Show Ground Reflector'}
                 </button>

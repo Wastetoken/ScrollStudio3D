@@ -9,6 +9,7 @@ import {
   Html,
   Environment,
   Lightformer,
+  MeshReflectorMaterial
 } from '@react-three/drei';
 import { EffectComposer, Bloom, DepthOfField, Vignette, ChromaticAberration, Glitch } from '@react-three/postprocessing';
 import * as THREE from 'three';
@@ -69,14 +70,21 @@ const HotspotMarker: React.FC<{ hotspot: Hotspot }> = ({ hotspot }) => {
 };
 
 const ModelPrimitive: React.FC<{ url: string; modelRef: React.RefObject<THREE.Group> }> = ({ url, modelRef }) => {
-  const { scene } = useGLTF(url);
+  const { setEngineError } = useStore();
+  
+  const { scene } = useGLTF(url, true, false, (loader) => {
+    loader.manager.onError = (url) => {
+      setEngineError(`Failed to load asset: ${url.split('/').pop()}. Ensure all sidecar files (.bin, textures) are present.`);
+    };
+  });
+  
   const { mode, isPlacingHotspot, addHotspot, currentProgress, chapters, activeChapterId, setSelectedMesh, selectedMeshName } = useStore();
   
   const activeChapter = chapters.find(c => c.id === activeChapterId);
   const materialOverrides = activeChapter?.materialOverrides || {};
 
-  // PRE-INDEX MESHES FOR PERFORMANCE
   const meshRegistry = useMemo(() => {
+    if (!scene) return new Map<string, THREE.Mesh>();
     const registry = new Map<string, THREE.Mesh>();
     scene.traverse((obj) => {
       if ((obj as THREE.Mesh).isMesh) {
@@ -86,7 +94,6 @@ const ModelPrimitive: React.FC<{ url: string; modelRef: React.RefObject<THREE.Gr
     return registry;
   }, [scene]);
 
-  // APPLY MATERIAL UPDATES IN LAYOUT PHASE (PRE-PAINT)
   useLayoutEffect(() => {
     if (!scene) return;
 
@@ -109,15 +116,12 @@ const ModelPrimitive: React.FC<{ url: string; modelRef: React.RefObject<THREE.Gr
           m.wireframe = false;
         }
 
-        // Apply visual selection state (Glow intensity)
         if (isSelected) {
-          // Temporarily boost emissive for selection visibility
           m.emissiveIntensity = (override?.emissiveIntensity || 0) + 1.5;
           if (!override?.emissive || override.emissive === '#000000') {
             m.emissive.set('#444444');
           }
         } else if (!override) {
-          // Reset to default
           m.emissiveIntensity = 0;
           m.emissive.set('#000000');
         }
@@ -154,13 +158,13 @@ const ModelPrimitive: React.FC<{ url: string; modelRef: React.RefObject<THREE.Gr
     }
   };
 
+  if (!scene) return null;
   return <primitive ref={modelRef} object={scene} onPointerDown={handlePointerDown} />;
 };
 
 const ProceduralEnvironment: React.FC<{ preset?: any }> = ({ preset }) => {
   return (
     <Environment preset={preset} resolution={256}>
-      {/* If preset is studio, we add custom lightformers for extra detail */}
       {preset === 'studio' && (
         <group rotation={[-Math.PI / 3, 0, 1]}>
           <Lightformer form="circle" intensity={4} rotation-x={Math.PI / 2} position={[0, 5, -9]} scale={[10, 10, 1]} />
@@ -174,7 +178,7 @@ const ProceduralEnvironment: React.FC<{ preset?: any }> = ({ preset }) => {
 };
 
 export const Scene: React.FC = () => {
-  const { chapters, activeChapterId, mode, isPlacingHotspot, isTransitioning } = useStore();
+  const { chapters, activeChapterId, mode, isPlacingHotspot, isTransitioning, engineError } = useStore();
   const { camera, gl } = useThree();
   const cameraRef = useRef<THREE.PerspectiveCamera>(null);
   const lookAtProxy = useMemo(() => new THREE.Vector3(0, 0, 0), []);
@@ -205,7 +209,7 @@ export const Scene: React.FC = () => {
       <PerspectiveCamera ref={cameraRef} makeDefault fov={config?.defaultFov || 35} position={[10, 10, 10]} near={0.1} far={2000} />
       {mode === 'edit' && <OrbitControls enableDamping dampingFactor={0.05} makeDefault enabled={!isPlacingHotspot} />}
       <color attach="background" args={[config?.backgroundColor || '#050505']} />
-      <fog attach="fog" args={[config?.fogColor || '#050505', 0, 100]} />
+      <fog attach="fog" args={[config?.fogColor || '#050505', 0, 100 / (config?.fogDensity || 0.001)]} />
       <ambientLight intensity={config?.ambientIntensity || 0.5} />
       <directionalLight position={[10, 10, 5]} intensity={config?.directionalIntensity || 1} castShadow />
       
@@ -219,25 +223,56 @@ export const Scene: React.FC = () => {
           </div>
         </Html>
       }>
-        <ModelPrimitive url={activeChapter.modelUrl} modelRef={modelRef} />
+        {!engineError ? (
+           <ModelPrimitive url={activeChapter.modelUrl} modelRef={modelRef} />
+        ) : (
+          <Html center>
+            <div className="flex flex-col items-center gap-6 text-center max-w-sm">
+              <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center border border-red-500/40 animate-pulse">
+                <i className="fa-solid fa-triangle-exclamation text-red-500 text-2xl"></i>
+              </div>
+              <div className="space-y-2">
+                <h3 className="text-white font-black uppercase italic tracking-tighter text-xl">Asset Load Failed</h3>
+                <p className="text-[10px] text-white/40 uppercase font-bold leading-relaxed">{engineError}</p>
+              </div>
+              <button 
+                onClick={() => window.location.reload()}
+                className="px-8 py-3 bg-white text-black text-[10px] font-black uppercase rounded-full shadow-2xl"
+              >
+                Reset Scene
+              </button>
+            </div>
+          </Html>
+        )}
         <ProceduralEnvironment preset={config?.envPreset} />
         {activeChapter.spatialAnnotations.map(h => <HotspotMarker key={h.id} hotspot={h} />)}
       </Suspense>
 
       {config?.showFloor && (
         <>
-          <ContactShadows opacity={0.6} scale={40} blur={2} far={15} color="#000000" position={[0, -0.01, 0]} />
+          <ContactShadows opacity={0.3} scale={40} blur={2.5} far={10} color="#000000" position={[0, -0.01, 0]} />
           <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.02, 0]}>
             <planeGeometry args={[100, 100]} />
-            <meshStandardMaterial color="#050505" roughness={0.5} metalness={0.8} transparent opacity={0.8} />
+            <MeshReflectorMaterial
+              blur={[300, 100]}
+              resolution={1024}
+              mixBlur={1}
+              mixStrength={40}
+              roughness={1}
+              depthScale={1.2}
+              minDepthThreshold={0.4}
+              maxDepthThreshold={1.4}
+              color="#050505"
+              metalness={0.5}
+              mirror={0} // 0 means it reflects purely based on fresnel and roughness
+            />
           </mesh>
-          <gridHelper args={[100, 100, 0x333333, 0x111111]} position={[0, -0.02, 0]} />
         </>
       )}
 
       <EffectComposer enableNormalPass={false}>
         <Bloom intensity={config?.bloomIntensity || 1.5} luminanceThreshold={config?.bloomThreshold || 0.9} mipmapBlur />
-        <DepthOfField focusDistance={config?.focusDistance || 0.01} focalLength={0.2} bokehScale={config?.bokehScale || 2} />
+        <DepthOfField focusDistance={config?.focusDistance || 10} focalLength={config?.aperture || 0.2} bokehScale={config?.bokehScale || 2} />
         <ChromaticAberration offset={new THREE.Vector2(config?.chromaticAberration || 0.001, config?.chromaticAberration || 0.001)} />
         <Vignette darkness={config?.vignetteDarkness || 1.1} />
         {isTransitioning && <Glitch strength={new THREE.Vector2(0.3, 1.0)} mode={1} />}

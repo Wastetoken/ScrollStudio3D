@@ -1,3 +1,4 @@
+
 export type Vector3Array = [number, number, number];
 export type QuaternionArray = [number, number, number, number];
 
@@ -46,6 +47,7 @@ export interface StoreState {
   showHandbook: boolean;
   isPlacingHotspot: boolean;
   isLoading: boolean;
+  engineError: string | null;
   selectedMeshName: string | null;
   cinematicBars: boolean;
   
@@ -67,6 +69,7 @@ export interface StoreState {
   setMode: (mode: EngineMode) => void;
   setCurrentProgress: (progress: number) => void;
   setIsLoading: (isLoading: boolean) => void;
+  setEngineError: (error: string | null) => void;
   setIsPlacingHotspot: (isPlacing: boolean) => void;
   setShowHandbook: (show: boolean) => void;
   setSelectedMesh: (name: string | null) => void;

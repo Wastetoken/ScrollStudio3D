@@ -8,7 +8,7 @@ const DEFAULT_CONFIG: SceneConfig = {
   directionalIntensity: 0.8,
   modelPosition: [0, 0, 0],
   modelRotation: [0, 0, 0],
-  showFloor: true,
+  showFloor: false,
   backgroundColor: '#050505',
   bloomIntensity: 1.5,
   bloomThreshold: 0.9,
@@ -49,6 +49,7 @@ export const useStore = create<StoreState & {
   showHandbook: false,
   isPlacingHotspot: false,
   isLoading: false,
+  engineError: null,
   isTransitioning: false,
   transitionProgress: 0,
   selectedMeshName: null,
@@ -70,6 +71,7 @@ export const useStore = create<StoreState & {
   setMode: (mode) => set({ mode }),
   setCurrentProgress: (progress) => set({ currentProgress: progress }),
   setIsLoading: (isLoading) => set({ isLoading }),
+  setEngineError: (error) => set({ engineError: error }),
   setIsPlacingHotspot: (isPlacing) => set({ isPlacingHotspot: isPlacing }),
   setShowHandbook: (show) => set({ showHandbook: show }),
   setAudit: (audit) => set({ lastAudit: audit }),
@@ -103,7 +105,8 @@ export const useStore = create<StoreState & {
 
     return {
       chapters: newChapters,
-      activeChapterId: id
+      activeChapterId: id,
+      engineError: null // Clear previous errors on new chapter add
     };
   }),
 
@@ -174,7 +177,8 @@ export const useStore = create<StoreState & {
     const newActiveId = state.activeChapterId === id ? (filtered[0]?.id || null) : state.activeChapterId;
     return {
       chapters: filtered,
-      activeChapterId: newActiveId
+      activeChapterId: newActiveId,
+      engineError: filtered.length === 0 ? null : state.engineError
     };
   }),
 
@@ -182,7 +186,7 @@ export const useStore = create<StoreState & {
     chapters: state.chapters.map(c => c.id === id ? { ...c, ...updates } : c)
   })),
 
-  setActiveChapter: (id) => set({ activeChapterId: id }),
+  setActiveChapter: (id) => set({ activeChapterId: id, engineError: null }),
 
   addKeyframe: (kf) => set((state) => ({
     chapters: state.chapters.map(c => c.id === state.activeChapterId 
@@ -276,7 +280,8 @@ export const useStore = create<StoreState & {
     chapters: project.chapters,
     activeChapterId: project.chapters[0]?.id || null,
     currentProgress: 0,
-    mode: 'edit'
+    mode: 'edit',
+    engineError: null
   }),
 
   reset: () => set(() => ({
@@ -287,6 +292,7 @@ export const useStore = create<StoreState & {
     activeChapterId: null,
     isPlacingHotspot: false,
     isLoading: false,
+    engineError: null,
     isTransitioning: false,
     transitionProgress: 0,
     lastAudit: null,
