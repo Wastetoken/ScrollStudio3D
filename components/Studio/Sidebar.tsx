@@ -48,7 +48,6 @@ export const Sidebar: React.FC = () => {
         }
       };
       reader.readAsText(file);
-      // Fixed: Ensure the input value is cleared after loading
       if (projectInputRef.current) projectInputRef.current.value = '';
     }
   };
@@ -371,8 +370,23 @@ export const Sidebar: React.FC = () => {
                   </select>
                 </div>
                 <div className="space-y-3">
-                  <div className="flex justify-between text-[9px] uppercase font-black text-white/30 tracking-widest">Global Exposure <span>{activeChapter.environment.exposure.toFixed(2)}</span></div>
+                  <div className="flex justify-between text-[9px] uppercase font-black text-white/30 tracking-widest">Tone Exposure <span>{activeChapter.environment.exposure.toFixed(2)}</span></div>
                   <input type="range" min="0.1" max="5" step="0.1" value={activeChapter.environment.exposure} onChange={e => setConfig({ exposure: parseFloat(e.target.value) })} className="w-full h-1 bg-white/10 appearance-none accent-white cursor-pointer" />
+                </div>
+              </div>
+
+              {/* Lighting */}
+              <div className="pt-6 border-t border-white/10 space-y-4">
+                <h6 className="text-[9px] font-black uppercase tracking-widest text-emerald-400">Direct Lighting</h6>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-[9px] uppercase font-black text-white/30 tracking-widest">Ambient Light <span>{activeChapter.environment.ambientIntensity.toFixed(2)}</span></div>
+                    <input type="range" min="0" max="5" step="0.05" value={activeChapter.environment.ambientIntensity} onChange={e => setConfig({ ambientIntensity: parseFloat(e.target.value) })} className="w-full h-1 bg-white/10 appearance-none accent-white cursor-pointer" />
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-[9px] uppercase font-black text-white/30 tracking-widest">Sun Intensity <span>{activeChapter.environment.directionalIntensity.toFixed(2)}</span></div>
+                    <input type="range" min="0" max="10" step="0.1" value={activeChapter.environment.directionalIntensity} onChange={e => setConfig({ directionalIntensity: parseFloat(e.target.value) })} className="w-full h-1 bg-white/10 appearance-none accent-white cursor-pointer" />
+                  </div>
                 </div>
               </div>
 
@@ -406,6 +420,10 @@ export const Sidebar: React.FC = () => {
                   <div className="space-y-2">
                     <div className="flex justify-between text-[9px] uppercase font-black text-white/30 tracking-widest">Bloom Intensity <span>{activeChapter.environment.bloomIntensity.toFixed(1)}</span></div>
                     <input type="range" min="0" max="10" step="0.1" value={activeChapter.environment.bloomIntensity} onChange={e => setConfig({ bloomIntensity: parseFloat(e.target.value) })} className="w-full h-1 bg-white/10 appearance-none accent-white cursor-pointer" />
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-[9px] uppercase font-black text-white/30 tracking-widest">Bloom Threshold <span>{activeChapter.environment.bloomThreshold.toFixed(2)}</span></div>
+                    <input type="range" min="0" max="1" step="0.01" value={activeChapter.environment.bloomThreshold} onChange={e => setConfig({ bloomThreshold: parseFloat(e.target.value) })} className="w-full h-1 bg-white/10 appearance-none accent-white cursor-pointer" />
                   </div>
                   <div className="space-y-2">
                     <div className="flex justify-between text-[9px] uppercase font-black text-white/30 tracking-widest">Lens Color Bleed <span>{activeChapter.environment.chromaticAberration.toFixed(4)}</span></div>
@@ -461,13 +479,11 @@ export const Sidebar: React.FC = () => {
                 </button>
 
                 <button 
-                  // Fixed: Rename projectImportRef to projectInputRef
                   onClick={() => projectInputRef.current?.click()}
                   className="w-full py-3 bg-white/5 border border-white/10 rounded-xl text-[9px] font-black uppercase tracking-widest text-white/20 hover:text-white transition-all"
                 >
                   Restore From JSON
                   <input 
-                    // Fixed: Rename projectImportRef to projectInputRef
                     ref={projectInputRef}
                     type="file" 
                     accept=".json" 

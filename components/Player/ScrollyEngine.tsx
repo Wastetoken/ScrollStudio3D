@@ -1,5 +1,5 @@
 
-import React, { useMemo, Suspense, useState, useLayoutEffect, ErrorInfo, ReactNode, useEffect, Component } from 'react';
+import React, { useMemo, Suspense, useState, useLayoutEffect, ReactNode, useEffect } from 'react';
 import * as THREE from 'three';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { 
@@ -32,17 +32,19 @@ interface EngineErrorBoundaryState {
   errorDetail?: string;
 }
 
-// Fixed: Explicitly extend Component from 'react' to resolve property access errors in TypeScript
-class EngineErrorBoundary extends Component<EngineErrorBoundaryProps, EngineErrorBoundaryState> {
-  state: EngineErrorBoundaryState = { hasError: false };
+// Fixed: Explicitly use React.Component and constructor/super to resolve property access errors for setState and props.
+class EngineErrorBoundary extends React.Component<EngineErrorBoundaryProps, EngineErrorBoundaryState> {
+  constructor(props: EngineErrorBoundaryProps) {
+    super(props);
+    this.state = { hasError: false };
+  }
   
   static getDerivedStateFromError() { 
     return { hasError: true }; 
   }
   
-  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     console.error("ScrollyEngine Critical Failure:", error, errorInfo);
-    // Fixed: setState is correctly identified now
     this.setState({ errorDetail: error.message });
   }
   
@@ -60,7 +62,6 @@ class EngineErrorBoundary extends Component<EngineErrorBoundaryProps, EngineErro
         </div>
       );
     }
-    // Fixed: props is correctly identified now
     return this.props.children;
   }
 }

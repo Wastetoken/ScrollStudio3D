@@ -210,8 +210,8 @@ export const Scene: React.FC = () => {
       {mode === 'edit' && <OrbitControls enableDamping dampingFactor={0.05} makeDefault enabled={!isPlacingHotspot} />}
       <color attach="background" args={[config?.backgroundColor || '#050505']} />
       <fog attach="fog" args={[config?.fogColor || '#050505', 0, 100 / (config?.fogDensity || 0.001)]} />
-      <ambientLight intensity={config?.ambientIntensity || 0.5} />
-      <directionalLight position={[10, 10, 5]} intensity={config?.directionalIntensity || 1} castShadow />
+      <ambientLight intensity={config?.ambientIntensity ?? 0.5} />
+      <directionalLight position={[10, 10, 5]} intensity={config?.directionalIntensity ?? 1} castShadow />
       
       <Suspense fallback={
         <Html center>
@@ -262,17 +262,25 @@ export const Scene: React.FC = () => {
               depthScale={1.2}
               minDepthThreshold={0.4}
               maxDepthThreshold={1.4}
-              color="#050505"
+              color={config?.backgroundColor || "#050505"}
               metalness={0.5}
-              mirror={0} // 0 means it reflects purely based on fresnel and roughness
+              mirror={0}
             />
           </mesh>
         </>
       )}
 
       <EffectComposer enableNormalPass={false}>
-        <Bloom intensity={config?.bloomIntensity || 1.5} luminanceThreshold={config?.bloomThreshold || 0.9} mipmapBlur />
-        <DepthOfField focusDistance={config?.focusDistance || 10} focalLength={config?.aperture || 0.2} bokehScale={config?.bokehScale || 2} />
+        <Bloom 
+          intensity={config?.bloomIntensity || 1.5} 
+          luminanceThreshold={config?.bloomThreshold ?? 0.9} 
+          mipmapBlur 
+        />
+        <DepthOfField 
+          focusDistance={config?.focusDistance || 10} 
+          focalLength={config?.aperture || 0.2} 
+          bokehScale={config?.bokehScale || 2} 
+        />
         <ChromaticAberration offset={new THREE.Vector2(config?.chromaticAberration || 0.001, config?.chromaticAberration || 0.001)} />
         <Vignette darkness={config?.vignetteDarkness || 1.1} />
         {isTransitioning && <Glitch strength={new THREE.Vector2(0.3, 1.0)} mode={1} />}
