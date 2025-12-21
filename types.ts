@@ -111,16 +111,18 @@ export interface StorySectionStyle {
   titleColor: string;
   descriptionColor: string;
   textAlign: 'left' | 'center' | 'right';
-  fontVariant: 'serif' | 'sans' | 'mono' | 'display';
-  theme: 'glass' | 'minimal' | 'outline' | 'hero';
+  fontVariant: 'serif' | 'sans' | 'mono' | 'display' | 'brutalist';
+  theme: 'glass' | 'solid' | 'outline' | 'none';
   accentColor: string;
   layout: 'split' | 'full' | 'floating';
   letterSpacing: 'tight' | 'normal' | 'wide' | 'ultra';
   fontWeight: 'thin' | 'normal' | 'bold' | 'black';
   textGlow: boolean;
   borderWeight: number;
+  borderRadius: number;
+  padding: number;
   backdropBlur: number;
-  entryAnimation: 'fade-up' | 'glitch' | 'letter-slide' | 'blur-in';
+  entryAnimation: 'fade-up' | 'reveal' | 'zoom' | 'slide-left';
 }
 
 export interface StorySection {

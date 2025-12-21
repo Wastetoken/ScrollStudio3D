@@ -1,5 +1,5 @@
 
-import React, { useMemo, Suspense, useState, useLayoutEffect, ErrorInfo, ReactNode, useEffect } from 'react';
+import React, { useMemo, Suspense, useState, useLayoutEffect, ErrorInfo, ReactNode, useEffect, Component } from 'react';
 import * as THREE from 'three';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { 
@@ -14,7 +14,7 @@ import {
   MeshReflectorMaterial
 } from '@react-three/drei';
 import { EffectComposer, Bloom, Vignette, DepthOfField, ChromaticAberration } from '@react-three/postprocessing';
-import { ProjectSchema, SceneChapter, Hotspot } from '../../types';
+import { ProjectSchema, SceneChapter, Hotspot, StorySection } from '../../types';
 
 interface EngineProps {
   data: ProjectSchema;
@@ -32,7 +32,8 @@ interface EngineErrorBoundaryState {
   errorDetail?: string;
 }
 
-class EngineErrorBoundary extends React.Component<EngineErrorBoundaryProps, EngineErrorBoundaryState> {
+// Fixed: Explicitly extend Component from 'react' to resolve property access errors in TypeScript
+class EngineErrorBoundary extends Component<EngineErrorBoundaryProps, EngineErrorBoundaryState> {
   state: EngineErrorBoundaryState = { hasError: false };
   
   static getDerivedStateFromError() { 
@@ -41,6 +42,7 @@ class EngineErrorBoundary extends React.Component<EngineErrorBoundaryProps, Engi
   
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error("ScrollyEngine Critical Failure:", error, errorInfo);
+    // Fixed: setState is correctly identified now
     this.setState({ errorDetail: error.message });
   }
   
@@ -58,6 +60,7 @@ class EngineErrorBoundary extends React.Component<EngineErrorBoundaryProps, Engi
         </div>
       );
     }
+    // Fixed: props is correctly identified now
     return this.props.children;
   }
 }
@@ -319,6 +322,51 @@ const StoryOverlay: React.FC<{ chapters: SceneChapter[] }> = ({ chapters }) => {
 
         if (opacity <= 0) return null;
 
+        const { style } = beat;
+        
+        const fontClass = {
+          display: 'font-black italic uppercase tracking-tighter',
+          serif: 'font-serif font-bold italic',
+          sans: 'font-sans font-bold',
+          mono: 'font-mono uppercase tracking-[0.2em]',
+          brutalist: 'font-black uppercase tracking-[-0.05em]'
+        }[style.fontVariant];
+
+        const alignmentClass = {
+          left: 'text-left items-start',
+          center: 'text-center items-center',
+          right: 'text-right items-end'
+        }[style.textAlign];
+
+        const layoutClass = {
+          split: 'w-1/2',
+          full: 'w-full max-w-7xl',
+          floating: 'max-w-xl'
+        }[style.layout || 'full'];
+
+        const themeStyles = {
+          glass: {
+            background: 'rgba(0, 0, 0, 0.4)',
+            backdropFilter: `blur(${style.backdropBlur || 30}px)`,
+            border: `${style.borderWeight || 1}px solid rgba(255, 255, 255, 0.1)`,
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)'
+          },
+          solid: {
+            background: style.accentColor || '#111111',
+            border: `${style.borderWeight || 0}px solid transparent`,
+          },
+          outline: {
+            background: 'transparent',
+            border: `${style.borderWeight || 2}px solid ${style.accentColor || '#ffffff'}`,
+          },
+          none: {
+            background: 'transparent',
+            border: 'none',
+            backdropFilter: 'none',
+            boxShadow: 'none'
+          }
+        }[style.theme || 'glass'];
+
         return (
           <div 
             key={beat.id}
@@ -336,15 +384,14 @@ const StoryOverlay: React.FC<{ chapters: SceneChapter[] }> = ({ chapters }) => {
               padding: '10vw'
             }}
           >
-            <div style={{ 
-              maxWidth: beat.style.layout === 'full' ? '850px' : '500px', 
-              background: beat.style.theme === 'glass' ? 'rgba(0,0,0,0.2)' : 'transparent', 
-              backdropFilter: beat.style.theme === 'glass' ? `blur(${beat.style.backdropBlur}px)` : 'none', 
-              padding: '4rem', 
-              borderRadius: '3.5rem', 
-              border: beat.style.theme === 'glass' ? '1px solid rgba(255,255,255,0.03)' : 'none',
-              boxShadow: beat.style.theme === 'glass' ? '0 50px 100px rgba(0,0,0,0.4)' : 'none'
-            }}>
+            <div 
+              style={{ 
+                ...themeStyles,
+                maxWidth: beat.style.layout === 'full' ? '850px' : '500px', 
+                padding: `${style.padding || 40}px`, 
+                borderRadius: `${style.borderRadius || 30}px`, 
+              }}
+            >
               <h2 style={{ 
                 fontSize: 'clamp(2rem, 8vw, 6rem)', 
                 fontWeight: beat.style.fontWeight === 'black' ? 900 : 700, 
@@ -352,7 +399,7 @@ const StoryOverlay: React.FC<{ chapters: SceneChapter[] }> = ({ chapters }) => {
                 lineHeight: 0.85, 
                 marginBottom: '1.5rem', 
                 fontStyle: 'italic', 
-                letterSpacing: '-0.05em', 
+                letterSpacing: style.letterSpacing === 'ultra' ? '0.3em' : '-0.05em', 
                 color: beat.style.titleColor,
                 textShadow: beat.style.textGlow ? `0 0 40px ${beat.style.titleColor}88` : 'none'
               }}>

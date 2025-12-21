@@ -73,7 +73,8 @@ const App: React.FC = () => {
       display: 'font-black italic uppercase tracking-tighter',
       serif: 'font-serif font-bold italic',
       sans: 'font-sans font-bold',
-      mono: 'font-mono'
+      mono: 'font-mono uppercase tracking-[0.2em]',
+      brutalist: 'font-black uppercase tracking-[-0.05em] leading-none'
     }[style.fontVariant];
 
     const alignmentClass = {
@@ -88,31 +89,66 @@ const App: React.FC = () => {
       floating: 'max-w-xl'
     }[style.layout || 'full'];
 
+    const animationClasses = {
+      'fade-up': isActive ? 'opacity-100 translate-y-0 scale-100 blur-0' : 'opacity-0 translate-y-12 scale-95 blur-xl',
+      'reveal': isActive ? 'opacity-100 [clip-path:inset(0_0_0_0)]' : 'opacity-0 [clip-path:inset(100%_0_0_0)]',
+      'zoom': isActive ? 'opacity-100 scale-100 blur-0' : 'opacity-0 scale-150 blur-2xl',
+      'slide-left': isActive ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-24'
+    }[style.entryAnimation || 'fade-up'];
+
+    const themeStyles = {
+      glass: {
+        background: 'rgba(0, 0, 0, 0.4)',
+        backdropFilter: `blur(${style.backdropBlur || 30}px)`,
+        border: `${style.borderWeight || 1}px solid rgba(255, 255, 255, 0.1)`,
+        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)'
+      },
+      solid: {
+        background: style.accentColor || '#111111',
+        border: `${style.borderWeight || 0}px solid transparent`,
+      },
+      outline: {
+        background: 'transparent',
+        border: `${style.borderWeight || 2}px solid ${style.accentColor || '#ffffff'}`,
+      },
+      none: {
+        background: 'transparent',
+        border: 'none',
+        backdropFilter: 'none',
+        boxShadow: 'none'
+      }
+    }[style.theme || 'glass'];
+
     return (
       <div 
         key={section.id} 
-        className={`absolute inset-0 flex flex-col justify-center transform transition-all duration-[1200ms] ${alignmentClass} ${isActive ? 'opacity-100 translate-y-0 scale-100 blur-0' : 'opacity-0 translate-y-12 scale-95 blur-xl pointer-events-none'}`}
+        className={`absolute inset-0 flex flex-col justify-center transition-all duration-[1200ms] ease-out ${alignmentClass} ${animationClasses} ${isActive ? '' : 'pointer-events-none'}`}
       >
         <div className={`px-12 ${layoutClass}`}>
           <div 
-            className={`p-16 rounded-[4rem] transition-all duration-700 ${style.theme === 'glass' ? 'bg-black/40 backdrop-blur-3xl border border-white/10 shadow-2xl' : 'bg-transparent'}`}
+            className="transition-all duration-700 overflow-hidden"
             style={{ 
-              borderColor: style.accentColor + '22',
-              backdropFilter: `blur(${style.backdropBlur}px)`
+              ...themeStyles,
+              borderRadius: `${style.borderRadius || 30}px`,
+              padding: `${style.padding || 40}px`,
             }}
           >
             <h2 
-              className={`text-7xl md:text-9xl mb-8 leading-[0.85] ${fontClass}`}
+              className={`text-6xl md:text-8xl mb-6 leading-[0.9] ${fontClass}`}
               style={{ 
                 color: style.titleColor,
-                textShadow: style.textGlow ? `0 0 40px ${style.titleColor}88` : 'none'
+                textShadow: style.textGlow ? `0 0 30px ${style.titleColor}44` : 'none',
+                letterSpacing: style.letterSpacing === 'tight' ? '-0.05em' : style.letterSpacing === 'wide' ? '0.1em' : style.letterSpacing === 'ultra' ? '0.3em' : 'normal'
               }}
             >
               {section.title}
             </h2>
             <p 
-              className={`text-xl md:text-2xl font-medium leading-relaxed max-w-2xl ${style.textAlign === 'center' ? 'mx-auto' : ''}`}
-              style={{ color: style.descriptionColor }}
+              className={`text-lg md:text-xl font-medium leading-relaxed max-w-2xl ${style.textAlign === 'center' ? 'mx-auto' : ''}`}
+              style={{ 
+                color: style.descriptionColor,
+                fontWeight: style.fontWeight === 'thin' ? 200 : style.fontWeight === 'bold' ? 700 : style.fontWeight === 'black' ? 900 : 400
+              }}
             >
               {section.description}
             </p>

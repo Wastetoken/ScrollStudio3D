@@ -17,7 +17,7 @@ export const Sidebar: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'chapters' | 'path' | 'story' | 'material' | 'hotspots' | 'scene' | 'project'>('chapters');
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const projectImportRef = useRef<HTMLInputElement>(null);
+  const projectInputRef = useRef<HTMLInputElement>(null);
 
   const activeChapter = chapters.find(c => c.id === activeChapterId);
   
@@ -48,6 +48,8 @@ export const Sidebar: React.FC = () => {
         }
       };
       reader.readAsText(file);
+      // Fixed: Ensure the input value is cleared after loading
+      if (projectInputRef.current) projectInputRef.current.value = '';
     }
   };
 
@@ -194,7 +196,7 @@ export const Sidebar: React.FC = () => {
                 style: {
                   titleColor: '#ffffff', descriptionColor: '#9ca3af', textAlign: 'center', fontVariant: 'display',
                   theme: 'glass', accentColor: '#ffffff', layout: 'full', letterSpacing: 'normal', fontWeight: 'black',
-                  textGlow: true, borderWeight: 1, backdropBlur: 30, entryAnimation: 'fade-up'
+                  textGlow: true, borderWeight: 1, borderRadius: 30, padding: 40, backdropBlur: 30, entryAnimation: 'fade-up'
                 }
               })} className="w-full py-4 bg-white text-black text-[10px] font-black uppercase rounded-[1.5rem] flex items-center justify-center gap-2 hover:bg-gray-100 transition-colors shadow-lg">
                 <i className="fa-solid fa-plus text-xs"></i> Add Narrative Beat
@@ -211,7 +213,7 @@ export const Sidebar: React.FC = () => {
                   </div>
                   
                   {expandedId === s.id && (
-                    <div className="space-y-4 pt-4 border-t border-white/5 animate-in fade-in duration-300">
+                    <div className="space-y-6 pt-4 border-t border-white/5 animate-in fade-in duration-300">
                       <div className="space-y-1">
                         <label className="text-[8px] uppercase font-black text-white/30 tracking-widest">Headline</label>
                         <input value={s.title} onChange={e => updateSection(s.id, { title: e.target.value })} className="bg-black/40 border border-white/10 w-full p-2.5 rounded-xl text-[10px] text-white outline-none" />
@@ -220,21 +222,60 @@ export const Sidebar: React.FC = () => {
                         <label className="text-[8px] uppercase font-black text-white/30 tracking-widest">Body Copy</label>
                         <textarea value={s.description} onChange={e => updateSection(s.id, { description: e.target.value })} className="bg-black/40 border border-white/10 w-full p-2.5 rounded-xl text-[10px] text-white h-24 resize-none outline-none" />
                       </div>
+
                       <div className="grid grid-cols-2 gap-3">
+                         <div className="space-y-1">
+                           <label className="text-[8px] uppercase font-black text-white/30 tracking-widest">Typeface</label>
+                           <select value={s.style.fontVariant} onChange={e => updateSection(s.id, { style: { ...s.style, fontVariant: e.target.value as any } })} className="bg-black/40 border border-white/10 w-full p-2 rounded-lg text-[9px] text-white outline-none">
+                             <option value="display">Display</option><option value="serif">Serif</option><option value="sans">Sans</option><option value="mono">Mono</option><option value="brutalist">Brutalist</option>
+                           </select>
+                         </div>
+                         <div className="space-y-1">
+                           <label className="text-[8px] uppercase font-black text-white/30 tracking-widest">Box Style</label>
+                           <select value={s.style.theme} onChange={e => updateSection(s.id, { style: { ...s.style, theme: e.target.value as any } })} className="bg-black/40 border border-white/10 w-full p-2 rounded-lg text-[9px] text-white outline-none">
+                             <option value="none">None (Text Only)</option><option value="glass">Glass Panel</option><option value="solid">Solid Background</option><option value="outline">Outline Only</option>
+                           </select>
+                         </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                         <div className="space-y-1">
+                           <label className="text-[8px] uppercase font-black text-white/30 tracking-widest">Entry FX</label>
+                           <select value={s.style.entryAnimation} onChange={e => updateSection(s.id, { style: { ...s.style, entryAnimation: e.target.value as any } })} className="bg-black/40 border border-white/10 w-full p-2 rounded-lg text-[9px] text-white outline-none">
+                             <option value="fade-up">Fade Up</option><option value="reveal">Reveal (Clip)</option><option value="zoom">Zoom Out</option><option value="slide-left">Slide Left</option>
+                           </select>
+                         </div>
                          <div className="space-y-1">
                            <label className="text-[8px] uppercase font-black text-white/30 tracking-widest">Layout</label>
                            <select value={s.style.layout} onChange={e => updateSection(s.id, { style: { ...s.style, layout: e.target.value as any } })} className="bg-black/40 border border-white/10 w-full p-2 rounded-lg text-[9px] text-white outline-none">
                              <option value="full">Full Screen</option><option value="split">Split Side</option><option value="floating">Floating</option>
                            </select>
                          </div>
-                         <div className="space-y-1">
-                           <label className="text-[8px] uppercase font-black text-white/30 tracking-widest">Typography</label>
-                           <select value={s.style.fontVariant} onChange={e => updateSection(s.id, { style: { ...s.style, fontVariant: e.target.value as any } })} className="bg-black/40 border border-white/10 w-full p-2 rounded-lg text-[9px] text-white outline-none">
-                             <option value="display">Display</option><option value="serif">Serif</option><option value="sans">Sans</option><option value="mono">Mono</option>
-                           </select>
-                         </div>
                       </div>
-                      <button onClick={() => removeSection(s.id)} className="w-full py-2.5 text-red-500 bg-red-500/10 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all">Remove Section</button>
+
+                      <div className="space-y-4 pt-2">
+                        <div className="space-y-2">
+                          <div className="flex justify-between text-[7px] uppercase font-black text-white/30 tracking-widest">Radius <span>{s.style.borderRadius}px</span></div>
+                          <input type="range" min="0" max="100" step="1" value={s.style.borderRadius} onChange={e => updateSection(s.id, { style: { ...s.style, borderRadius: parseInt(e.target.value) } })} className="w-full h-1 bg-white/10 appearance-none accent-white cursor-pointer" />
+                        </div>
+                        <div className="space-y-2">
+                          <div className="flex justify-between text-[7px] uppercase font-black text-white/30 tracking-widest">Border <span>{s.style.borderWeight}px</span></div>
+                          <input type="range" min="0" max="10" step="1" value={s.style.borderWeight} onChange={e => updateSection(s.id, { style: { ...s.style, borderWeight: parseInt(e.target.value) } })} className="w-full h-1 bg-white/10 appearance-none accent-white cursor-pointer" />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <label className="text-[8px] uppercase font-black text-white/30 tracking-widest">Title Color</label>
+                          <input type="color" value={s.style.titleColor} onChange={e => updateSection(s.id, { style: { ...s.style, titleColor: e.target.value } })} className="w-full h-8 bg-transparent cursor-pointer rounded overflow-hidden" />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[8px] uppercase font-black text-white/30 tracking-widest">Accent/Box</label>
+                          <input type="color" value={s.style.accentColor} onChange={e => updateSection(s.id, { style: { ...s.style, accentColor: e.target.value } })} className="w-full h-8 bg-transparent cursor-pointer rounded overflow-hidden" />
+                        </div>
+                      </div>
+
+                      <button onClick={() => removeSection(s.id)} className="w-full py-2.5 text-red-500 bg-red-500/10 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all">Remove Beat</button>
                     </div>
                   )}
                 </div>
@@ -420,12 +461,14 @@ export const Sidebar: React.FC = () => {
                 </button>
 
                 <button 
-                  onClick={() => projectImportRef.current?.click()}
+                  // Fixed: Rename projectImportRef to projectInputRef
+                  onClick={() => projectInputRef.current?.click()}
                   className="w-full py-3 bg-white/5 border border-white/10 rounded-xl text-[9px] font-black uppercase tracking-widest text-white/20 hover:text-white transition-all"
                 >
                   Restore From JSON
                   <input 
-                    ref={projectImportRef}
+                    // Fixed: Rename projectImportRef to projectInputRef
+                    ref={projectInputRef}
                     type="file" 
                     accept=".json" 
                     onChange={handleProjectImport} 
