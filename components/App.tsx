@@ -1,4 +1,5 @@
-import React, { useEffect, useMemo, Suspense, startTransition } from 'react';
+
+import React, { useEffect, useMemo, Suspense, useRef } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { useStore } from '../useStore';
 import { Scene } from './Studio/Scene';
@@ -7,65 +8,129 @@ import { Timeline } from './Studio/Timeline';
 import { Handbook } from './Studio/Handbook';
 import { Uploader } from '../hooks/Uploader';
 import { KeyframeCapturer } from './Studio/KeyframeCapturer';
+import { ExportOverlay } from './Studio/ExportOverlay';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { StorySection } from '../types';
 
 gsap.registerPlugin(ScrollTrigger);
 
 const App: React.FC = () => {
-  const { mode, modelUrl, currentProgress, sections, setMode, isPlacingHotspot } = useStore();
+  const { mode, currentProgress, chapters, activeChapterId, setMode, isPlacingHotspot, setActiveChapter, setTransitionState, setSelectedMesh } = useStore();
+  const transitionTimeline = useRef<gsap.core.Timeline | null>(null);
+
+  const currentChapter = useMemo(() => {
+    if (mode === 'edit') return chapters.find(c => c.id === activeChapterId);
+    const found = chapters.find(c => currentProgress >= c.startProgress && currentProgress <= c.endProgress);
+    return found || chapters[0];
+  }, [mode, chapters, activeChapterId, currentProgress]);
 
   useEffect(() => {
-    // Sync class for styling & height
-    const baseClass = mode === 'preview' ? 'preview-mode' : 'edit-mode';
-    const placingClass = isPlacingHotspot ? 'placing-hotspot' : '';
-    
-    document.documentElement.className = baseClass;
-    document.body.className = `${baseClass} ${placingClass}`.trim();
-
-    if (mode === 'preview') {
-      const timer = setTimeout(() => {
-        ScrollTrigger.refresh();
-      }, 100);
-      return () => clearTimeout(timer);
-    } else {
-      window.scrollTo(0, 0); 
+    if (mode === 'preview' && currentChapter && currentChapter.id !== activeChapterId) {
+      if (transitionTimeline.current) transitionTimeline.current.kill();
+      const config = currentChapter.transition;
+      const duration = (config?.duration || 1200) / 1000;
+      
+      transitionTimeline.current = gsap.timeline({
+        onStart: () => setTransitionState(true, 0),
+        onComplete: () => { setTransitionState(false, 0); transitionTimeline.current = null; }
+      });
+      
+      transitionTimeline.current.to({}, { 
+        duration: duration / 2, 
+        onUpdate: function() { setTransitionState(true, this.progress()); }, 
+        onComplete: () => setActiveChapter(currentChapter.id) 
+      });
+      
+      transitionTimeline.current.to({}, { 
+        duration: duration / 2, 
+        onUpdate: function() { setTransitionState(true, 1 - this.progress()); } 
+      });
     }
+  }, [currentChapter, mode, activeChapterId, setActiveChapter, setTransitionState]);
+
+  useEffect(() => {
+    const baseClass = mode === 'preview' ? 'preview-mode' : 'edit-mode';
+    document.documentElement.className = baseClass;
+    document.body.className = `${baseClass} ${isPlacingHotspot ? 'placing-hotspot' : ''}`.trim();
   }, [mode, isPlacingHotspot]);
 
-  const activeSections = useMemo(() => {
-    return sections.filter((s, i) => {
-      const nextSection = sections[i + 1];
-      const end = nextSection ? nextSection.progress : 1.1;
+  const activeNarrativeBeats = useMemo(() => {
+    if (!currentChapter) return [];
+    const beats = currentChapter.narrativeBeats;
+    return beats.filter((s, i) => {
+      const nextBeat = beats[i + 1];
+      const end = nextBeat ? nextBeat.progress : 1.1;
       return currentProgress >= s.progress && currentProgress < end;
     });
-  }, [sections, currentProgress]);
+  }, [currentChapter, currentProgress]);
 
-  const handleExitPreview = () => {
-    startTransition(() => {
-      setMode('edit');
-    });
+  const renderSection = (section: StorySection) => {
+    const isActive = activeNarrativeBeats.some(as => as.id === section.id);
+    const { style } = section;
+    
+    const fontClass = {
+      display: 'font-black italic uppercase tracking-tighter',
+      serif: 'font-serif font-bold italic',
+      sans: 'font-sans font-bold',
+      mono: 'font-mono'
+    }[style.fontVariant];
+
+    const alignmentClass = {
+      left: 'text-left items-start',
+      center: 'text-center items-center',
+      right: 'text-right items-end'
+    }[style.textAlign];
+
+    const layoutClass = {
+      split: 'w-1/2',
+      full: 'w-full max-w-7xl',
+      floating: 'max-w-xl'
+    }[style.layout || 'full'];
+
+    return (
+      <div 
+        key={section.id} 
+        className={`absolute inset-0 flex flex-col justify-center transform transition-all duration-[1200ms] ${alignmentClass} ${isActive ? 'opacity-100 translate-y-0 scale-100 blur-0' : 'opacity-0 translate-y-12 scale-95 blur-xl pointer-events-none'}`}
+      >
+        <div className={`px-12 ${layoutClass}`}>
+          <div 
+            className={`p-16 rounded-[4rem] transition-all duration-700 ${style.theme === 'glass' ? 'bg-black/40 backdrop-blur-3xl border border-white/10 shadow-2xl' : 'bg-transparent'}`}
+            style={{ 
+              borderColor: style.accentColor + '22',
+              backdropFilter: `blur(${style.backdropBlur}px)`
+            }}
+          >
+            <h2 
+              className={`text-7xl md:text-9xl mb-8 leading-[0.85] ${fontClass}`}
+              style={{ 
+                color: style.titleColor,
+                textShadow: style.textGlow ? `0 0 40px ${style.titleColor}88` : 'none'
+              }}
+            >
+              {section.title}
+            </h2>
+            <p 
+              className={`text-xl md:text-2xl font-medium leading-relaxed max-w-2xl ${style.textAlign === 'center' ? 'mx-auto' : ''}`}
+              style={{ color: style.descriptionColor }}
+            >
+              {section.description}
+            </p>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   return (
     <div className={`w-full relative bg-[#050505] ${mode === 'preview' ? 'min-h-[1000vh]' : 'h-screen overflow-hidden'}`}>
-      
-      {/* 3D Render Layer */}
-      <div className={`fixed inset-0 z-0 ${mode === 'edit' ? 'pointer-events-auto' : 'pointer-events-none'}`}>
+      <div className={`fixed inset-0 z-0`}>
         <Canvas 
           shadows 
           dpr={[1, 2]} 
-          gl={{ 
-            antialias: true, 
-            alpha: true,
-            powerPreference: "high-performance" 
-          }}
-          camera={{ fov: 35, position: [5, 5, 5] }}
+          gl={{ antialias: true, alpha: true }}
+          onPointerMissed={() => setSelectedMesh(null)}
         >
-          {/* 
-            Ensuring a robust Suspense boundary around all children 
-            to handle async loads from useGLTF without crashing the app (Error #525).
-          */}
           <Suspense fallback={null}>
             <Scene />
             <KeyframeCapturer />
@@ -73,100 +138,28 @@ const App: React.FC = () => {
         </Canvas>
       </div>
 
-      {/* Invisible Scroll Spacer */}
-      {mode === 'preview' && (
-        <div className="absolute top-0 left-0 w-full h-[1000vh] pointer-events-none z-[-1]" />
-      )}
-
-      {/* Model Onboarding */}
-      {!modelUrl && <Uploader />}
-
-      {/* Handbook / Tutorial Overlay */}
+      {chapters.length === 0 && <Uploader />}
       <Handbook />
-
-      {/* Editor UI */}
-      {mode === 'edit' && modelUrl && (
-        <div className="relative z-20 w-full h-full pointer-events-none select-none">
+      <ExportOverlay />
+      
+      {mode === 'edit' && chapters.length > 0 && (
+        <div className="relative z-[100] w-full h-full pointer-events-none">
           <div className="pointer-events-auto">
             <Sidebar />
             <Timeline />
           </div>
-          <div className="fixed top-8 right-8 z-40 pointer-events-auto">
-             <div className={`glass-panel px-6 py-3 rounded-full flex items-center gap-3 border-white/10 transition-colors ${isPlacingHotspot ? 'bg-emerald-500/20 border-emerald-500/50' : ''}`}>
-                <div className={`w-1.5 h-1.5 rounded-full animate-pulse shadow-[0_0_8px_currentColor] ${isPlacingHotspot ? 'bg-emerald-400 text-emerald-400' : 'bg-white text-white'}`}></div>
-                <span className="text-[10px] font-black uppercase tracking-[0.25em] text-white/90">
-                  {isPlacingHotspot ? 'Placement Active' : 'Studio Active'}
-                </span>
-             </div>
-          </div>
         </div>
       )}
 
-      {/* Preview HUD & Content */}
       {mode === 'preview' && (
-        <div className="relative z-30 w-full">
-          <div className="fixed inset-0 pointer-events-none flex items-center justify-center">
-            {sections.map((section) => {
-              const isFirst = sections[0]?.id === section.id;
-              const isActive = activeSections.some(as => as.id === section.id);
-              
-              return (
-                <div 
-                  key={section.id}
-                  className={`absolute inset-0 flex flex-col items-center justify-center p-10 transition-all duration-1000 transform ${
-                    isActive ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-16'
-                  }`}
-                >
-                   <div className="max-w-3xl text-center space-y-6">
-                      {isFirst ? (
-                        <div className="animate-in fade-in zoom-in-95 duration-1000">
-                          <div className="inline-block px-4 py-1.5 rounded-full border border-white/20 bg-white/5 backdrop-blur-md text-[10px] font-black uppercase tracking-[0.4em] text-white/60 mb-6">
-                            Scroll to begin
-                          </div>
-                          <h1 className="text-7xl md:text-9xl font-black italic tracking-tighter leading-none text-white uppercase drop-shadow-2xl">
-                            {section.title}
-                          </h1>
-                          <p className="text-gray-400 text-lg md:text-xl font-medium max-w-xl mx-auto leading-relaxed mt-6">
-                            {section.description}
-                          </p>
-                        </div>
-                      ) : (
-                        <div className="glass-panel p-12 rounded-[3rem] backdrop-blur-md border border-white/5 text-left max-w-xl mx-auto shadow-2xl">
-                           <h2 className="text-5xl font-black italic tracking-tight text-white uppercase mb-6 leading-tight">
-                             {section.title}
-                           </h2>
-                           <p className="text-gray-300 text-lg font-medium leading-relaxed">
-                             {section.description}
-                           </p>
-                           <div className="h-1 w-24 bg-white mt-10 shadow-[0_0_20px_rgba(255,255,255,0.5)]"></div>
-                        </div>
-                      )}
-                   </div>
-                </div>
-              );
-            })}
+        <div className="relative z-[100] w-full">
+          <div className="fixed inset-0 pointer-events-none">
+            {currentChapter?.narrativeBeats.map(renderSection)}
           </div>
-
-          <div className="fixed top-8 left-8 z-50 pointer-events-auto">
-             <button 
-              onClick={handleExitPreview}
-              className="bg-white hover:bg-gray-200 text-black px-8 py-4 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all shadow-2xl flex items-center gap-4 active:scale-95 group"
-             >
-               <i className="fa-solid fa-chevron-left group-hover:-translate-x-1 transition-transform"></i> Exit Viewer
+          <div className="fixed top-8 left-8 z-[200] pointer-events-auto">
+             <button onClick={() => setMode('edit')} className="bg-black/60 backdrop-blur-3xl border border-white/10 text-white px-8 py-4 rounded-full text-[10px] font-black uppercase tracking-widest transition-all hover:bg-white hover:text-black hover:scale-105 active:scale-95">
+               <i className="fa-solid fa-arrow-left mr-2"></i> Studio
              </button>
-          </div>
-
-          <div className="fixed bottom-10 left-10 right-10 z-50 pointer-events-none flex justify-between items-end">
-             <div className="space-y-1">
-               <div className="text-[9px] font-black text-white/30 uppercase tracking-[0.3em]">Story Progress</div>
-               <div className="text-2xl font-black italic text-white/90">{(currentProgress * 100).toFixed(0)}%</div>
-             </div>
-             <div className="w-64 h-1 bg-white/10 rounded-full overflow-hidden pointer-events-auto">
-                <div 
-                  className="h-full bg-white transition-all duration-300 shadow-[0_0_10px_white]" 
-                  style={{ width: `${(currentProgress * 100)}%` }}
-                ></div>
-             </div>
           </div>
         </div>
       )}

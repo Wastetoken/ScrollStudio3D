@@ -11,123 +11,125 @@ export const useGSAPTimeline = (
   lookAtProxy: THREE.Vector3,
   modelRef: React.RefObject<THREE.Group>
 ) => {
-  const { keyframes, mode, currentProgress, setCurrentProgress, modelUrl } = useStore();
+  const { chapters, activeChapterId, mode, currentProgress, setCurrentProgress } = useStore();
   const timelineRef = useRef<gsap.core.Timeline | null>(null);
 
-  useEffect(() => {
-    // Clear all existing triggers to avoid duplication
-    ScrollTrigger.getAll().forEach(t => t.kill());
+  const activeChapter = chapters.find(c => c.id === activeChapterId);
+  const keyframes = activeChapter?.cameraPath || [];
+  const splineAlpha = activeChapter?.environment.splineAlpha ?? 0.5;
 
-    if (!camera || keyframes.length < 1 || !modelUrl) {
-      if (timelineRef.current) {
-        timelineRef.current.kill();
-        timelineRef.current = null;
-      }
-      return;
-    }
+  useEffect(() => {
+    const refresh = () => ScrollTrigger.refresh();
+    window.addEventListener('resize', refresh);
+    
+    // Critical: Clean up existing triggers strictly
+    const currentTriggers = ScrollTrigger.getAll();
+    currentTriggers.forEach(t => t.kill());
+
+    // Defensive Check: Ensure camera and keyframes are valid before proceeding
+    if (!camera || !camera.position || keyframes.length < 1 || !activeChapter) return;
 
     const ctx = gsap.context(() => {
-      const tl = gsap.timeline({
-        paused: mode === 'edit',
-        onUpdate: () => {
-          if (mode === 'preview') {
-            startTransition(() => {
-              setCurrentProgress(tl.progress());
-            });
+      const tl = gsap.timeline({ paused: true });
+
+      // Prevent "Divide by Zero" in spline math if keyframes share progress
+      const sorted = [...keyframes]
+        .sort((a, b) => a.progress - b.progress)
+        .map((kf, i, arr) => {
+          if (i > 0 && kf.progress <= arr[i-1].progress) {
+            return { ...kf, progress: arr[i-1].progress + 0.00001 };
           }
-          if (camera) {
+          return kf;
+        });
+      
+      if (sorted.length === 1) {
+        const kf = sorted[0];
+        // Ensure properties exist before calling GSAP .set
+        if (camera.position && kf.position) tl.set(camera.position, { x: kf.position[0], y: kf.position[1], z: kf.position[2] }, 0);
+        if (lookAtProxy && kf.target) tl.set(lookAtProxy, { x: kf.target[0], y: kf.target[1], z: kf.target[2] }, 0);
+        tl.set(camera, { fov: kf.fov || 35 }, 0);
+        
+        if (camera.quaternion && kf.quaternion) {
+          camera.quaternion.set(kf.quaternion[0], kf.quaternion[1], kf.quaternion[2], kf.quaternion[3]);
+        }
+        return;
+      }
+
+      const points = sorted.map(k => new THREE.Vector3(...k.position));
+      const targets = sorted.map(k => new THREE.Vector3(...k.target));
+      const posCurve = new THREE.CatmullRomCurve3(points);
+      posCurve.curveType = splineAlpha === 0 ? 'centripetal' : splineAlpha === 1 ? 'chordal' : 'catmullrom';
+      
+      const targetCurve = new THREE.CatmullRomCurve3(targets);
+      targetCurve.curveType = posCurve.curveType;
+
+      const scrubObj = { progress: 0 };
+      tl.to(scrubObj, {
+        progress: 1,
+        ease: 'none',
+        duration: 1,
+        onUpdate: () => {
+          const t = scrubObj.progress;
+          const currentPos = posCurve.getPointAt(t);
+          const currentTarget = targetCurve.getPointAt(t);
+          
+          if (camera.position && currentPos) camera.position.copy(currentPos);
+          if (lookAtProxy && currentTarget) lookAtProxy.copy(currentTarget);
+
+          let i = 0;
+          while (i < sorted.length - 2 && t > sorted[i+1].progress) i++;
+          const kfA = sorted[i];
+          const kfB = sorted[i+1] || kfA;
+          const segmentProgress = kfA === kfB ? 0 : (t - kfA.progress) / (kfB.progress - kfA.progress);
+          const alpha = THREE.MathUtils.clamp(segmentProgress, 0, 1);
+
+          if (camera.quaternion && kfA.quaternion && kfB.quaternion) {
+            const qA = new THREE.Quaternion(...kfA.quaternion);
+            const qB = new THREE.Quaternion(...kfB.quaternion);
+            camera.quaternion.slerpQuaternions(qA, qB, alpha);
+          }
+          
+          camera.fov = kfA.fov + (kfB.fov - kfA.fov) * alpha;
+          if (typeof camera.updateProjectionMatrix === 'function') {
             camera.updateProjectionMatrix();
           }
-        },
-      });
-
-      // Build animation sequence from keyframes
-      const sorted = [...keyframes].sort((a, b) => a.progress - b.progress);
-      const first = sorted[0];
-      tl.set(camera.position, { x: first.position[0], y: first.position[1], z: first.position[2] }, 0);
-      tl.set(lookAtProxy, { x: first.target[0], y: first.target[1], z: first.target[2] }, 0);
-      tl.set(camera, { fov: first.fov || 35 }, 0);
-      
-      if (modelRef.current) {
-        tl.set(modelRef.current.rotation, { 
-          x: first.rotation[0], 
-          y: first.rotation[1], 
-          z: first.rotation[2] 
-        }, 0);
-      }
-
-      for (let i = 1; i < sorted.length; i++) {
-        const prev = sorted[i - 1];
-        const current = sorted[i];
-        const duration = current.progress - prev.progress;
-        const startTime = prev.progress;
-
-        tl.to(camera.position, {
-          x: current.position[0],
-          y: current.position[1],
-          z: current.position[2],
-          ease: 'none', 
-          duration: duration,
-        }, startTime);
-
-        tl.to(lookAtProxy, {
-          x: current.target[0],
-          y: current.target[1],
-          z: current.target[2],
-          ease: 'none',
-          duration: duration,
-        }, startTime);
-
-        tl.to(camera, {
-          fov: current.fov || 35,
-          ease: 'none',
-          duration: duration,
-          onUpdate: () => camera.updateProjectionMatrix()
-        }, startTime);
-
-        if (modelRef.current) {
-          tl.to(modelRef.current.rotation, {
-            x: current.rotation[0],
-            y: current.rotation[1],
-            z: current.rotation[2],
-            ease: 'none',
-            duration: duration,
-          }, startTime);
         }
-      }
+      }, 0);
 
       if (mode === 'preview') {
-        // Delay ScrollTrigger creation slightly to ensure DOM has settled with height
-        setTimeout(() => {
-          ScrollTrigger.create({
-            animation: tl,
-            trigger: "body",
-            scroller: window,
-            start: "top top",
-            end: "bottom bottom",
-            scrub: true,
-            invalidateOnRefresh: true,
-          });
-          ScrollTrigger.refresh();
-        }, 200);
+        ScrollTrigger.create({
+          trigger: "body",
+          start: "top top",
+          end: "bottom bottom",
+          scrub: 0.1, 
+          onUpdate: (self) => {
+            startTransition(() => {
+              setCurrentProgress(self.progress);
+            });
+          }
+        });
+        requestAnimationFrame(() => ScrollTrigger.refresh());
       }
-
       timelineRef.current = tl;
     });
 
     return () => {
-      ctx.revert();
-      ScrollTrigger.getAll().forEach(t => t.kill());
+      window.removeEventListener('resize', refresh);
+      if (ctx && typeof ctx.revert === 'function') ctx.revert();
     };
-  }, [keyframes, mode, camera, lookAtProxy, modelRef, setCurrentProgress, modelUrl]);
+  }, [keyframes, mode, camera, lookAtProxy, modelRef, setCurrentProgress, activeChapter, splineAlpha]);
 
-  // Handle seeking in Editor Mode
   useEffect(() => {
-    if (mode === 'edit' && timelineRef.current) {
-      timelineRef.current.progress(currentProgress);
-      if (camera) camera.updateProjectionMatrix();
+    if (timelineRef.current) {
+      if (mode === 'preview' && activeChapter) {
+        const range = activeChapter.endProgress - activeChapter.startProgress;
+        const rel = (currentProgress - activeChapter.startProgress) / (range || 1);
+        timelineRef.current.progress(THREE.MathUtils.clamp(rel, 0, 1));
+      } else {
+        timelineRef.current.progress(currentProgress);
+      }
     }
-  }, [currentProgress, mode, camera]);
+  }, [currentProgress, mode, activeChapter]);
 
   return timelineRef;
 };

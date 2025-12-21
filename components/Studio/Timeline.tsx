@@ -1,12 +1,19 @@
-import React, { useRef, useTransition } from 'react';
+import React, { useRef, useTransition, useMemo } from 'react';
 import { useStore } from '../../useStore';
 
 export const Timeline: React.FC = () => {
-  const { currentProgress, setCurrentProgress, keyframes, mode, modelUrl } = useStore();
+  const { currentProgress, setCurrentProgress, chapters, activeChapterId, mode } = useStore();
   const timelineRef = useRef<HTMLDivElement>(null);
   const [isPending, startTransition] = useTransition();
 
-  if (!modelUrl) return null;
+  const activeChapter = useMemo(() => 
+    chapters.find(c => c.id === activeChapterId), 
+    [chapters, activeChapterId]
+  );
+
+  if (!activeChapter || !activeChapter.modelUrl) return null;
+
+  const keyframes = activeChapter.cameraPath;
 
   const handleSeek = (e: React.MouseEvent) => {
     if (!timelineRef.current) return;
@@ -14,7 +21,6 @@ export const Timeline: React.FC = () => {
     const x = e.clientX - rect.left;
     const progress = Math.max(0, Math.min(1, x / rect.width));
     
-    // Wrap seeking in a transition to maintain concurrent safety
     startTransition(() => {
       setCurrentProgress(progress);
     });

@@ -1,15 +1,15 @@
+
 import { create } from 'zustand';
-import { StoreState, EngineMode, SceneConfig, Vector3Array, StorySection, Hotspot } from './types';
+import { StoreState, EngineMode, SceneConfig, SceneChapter, StorySection, Hotspot, StorySectionStyle, ProjectSchema, Keyframe, TransitionConfig, AssetAudit, PerformanceTier, MaterialOverride } from './types';
 
 const DEFAULT_CONFIG: SceneConfig = {
   modelScale: 1,
-  ambientIntensity: 0.5,
-  directionalIntensity: 1,
+  ambientIntensity: 0.3,
+  directionalIntensity: 0.8,
   modelPosition: [0, 0, 0],
   modelRotation: [0, 0, 0],
   showFloor: true,
   backgroundColor: '#050505',
-  // Cinematic Defaults
   bloomIntensity: 1.5,
   bloomThreshold: 0.9,
   exposure: 1.0,
@@ -19,103 +19,278 @@ const DEFAULT_CONFIG: SceneConfig = {
   aperture: 0.025,
   bokehScale: 1.0,
   defaultFov: 35,
+  grainIntensity: 0.05,
+  cameraShake: 0.1,
+  chromaticAberration: 0.002,
+  scanlineIntensity: 0.1,
+  vignetteDarkness: 1.1,
+  ambientGlowColor: '#111111',
+  splineAlpha: 0.5,
+  envMapIntensity: 1.0,
+  envPreset: 'studio'
 };
 
-const DEFAULT_SECTIONS: StorySection[] = [
-  { id: 'start', progress: 0, title: 'THE JOURNEY', description: 'Begin your cinematic exploration of this 3D landscape.' }
-];
+const DEFAULT_TRANSITION: TransitionConfig = {
+  type: 'flare',
+  duration: 1200,
+  intensity: 1.0
+};
 
-export const useStore = create<StoreState>((set) => ({
-  modelUrl: null,
+export const useStore = create<StoreState & { 
+  autoDistributeChapters: () => void;
+  duplicateChapter: (id: string) => void;
+  moveChapter: (id: string, direction: 'up' | 'down') => void;
+  isExporting: boolean;
+  setIsExporting: (isExporting: boolean) => void;
+}>((set) => ({
   mode: 'edit',
-  keyframes: [],
-  sections: [...DEFAULT_SECTIONS],
-  hotspots: [],
-  config: { ...DEFAULT_CONFIG },
+  performanceTier: 'high',
   currentProgress: 0,
-  cameraPosition: [5, 5, 5],
-  cameraTarget: [0, 0, 0],
   showHandbook: false,
   isPlacingHotspot: false,
+  isLoading: false,
+  isTransitioning: false,
+  transitionProgress: 0,
+  selectedMeshName: null,
+  cinematicBars: false,
+  isExporting: false,
+  
+  projectName: 'UNTITLED_CHRONICLE',
+  author: 'DESIGN_OPERATOR_01',
+  projectDescription: 'A multi-chapter high-fidelity spatial narrative.',
 
-  setModelUrl: (url) => set((state) => {
-    if (url && state.modelUrl && state.modelUrl.startsWith('blob:') && state.modelUrl !== url) {
-      URL.revokeObjectURL(state.modelUrl);
-    }
-    return { modelUrl: url };
+  chapters: [],
+  activeChapterId: null,
+  lastAudit: null,
+
+  setIsExporting: (isExporting) => set({ isExporting }),
+  setPerformanceTier: (tier) => set({ performanceTier: tier }),
+  setTransitionState: (isTransitioning, progress) => set({ isTransitioning, transitionProgress: progress }),
+  setProjectInfo: (info) => set((state) => ({ ...state, ...info })),
+  setMode: (mode) => set({ mode }),
+  setCurrentProgress: (progress) => set({ currentProgress: progress }),
+  setIsLoading: (isLoading) => set({ isLoading }),
+  setIsPlacingHotspot: (isPlacing) => set({ isPlacingHotspot: isPlacing }),
+  setShowHandbook: (show) => set({ showHandbook: show }),
+  setAudit: (audit) => set({ lastAudit: audit }),
+  setSelectedMesh: (name) => set({ selectedMeshName: name }),
+  setCinematicBars: (active) => set({ cinematicBars: active }),
+
+  addChapter: (modelUrl, name) => set((state) => {
+    const id = Math.random().toString(36).substring(2, 9);
+    const newChapter: SceneChapter = {
+      id,
+      name: name || `CHAPTER_${state.chapters.length + 1}`,
+      modelUrl,
+      startProgress: 0,
+      endProgress: 1,
+      transition: { ...DEFAULT_TRANSITION },
+      environment: { ...DEFAULT_CONFIG },
+      cameraPath: [],
+      narrativeBeats: [],
+      spatialAnnotations: [],
+      materialOverrides: {}
+    };
+    const newChapters = [...state.chapters, newChapter];
+    
+    // Auto-redistribute if multiple chapters exist to fill [0,1]
+    const count = newChapters.length;
+    const segment = 1 / count;
+    newChapters.forEach((c, i) => {
+      c.startProgress = i * segment;
+      c.endProgress = (i + 1) * segment;
+    });
+
+    return {
+      chapters: newChapters,
+      activeChapterId: id
+    };
   }),
 
-  setMode: (mode) => set({ mode }),
+  duplicateChapter: (id) => set((state) => {
+    const original = state.chapters.find(c => c.id === id);
+    if (!original) return state;
+    const newId = Math.random().toString(36).substring(2, 9);
+    const copy: SceneChapter = JSON.parse(JSON.stringify(original));
+    copy.id = newId;
+    copy.name = `${original.name}_COPY`;
+    
+    const index = state.chapters.findIndex(c => c.id === id);
+    const newChapters = [...state.chapters];
+    newChapters.splice(index + 1, 0, copy);
+    
+    // Redistribute
+    const segment = 1 / newChapters.length;
+    newChapters.forEach((c, i) => {
+      c.startProgress = i * segment;
+      c.endProgress = (i + 1) * segment;
+    });
+    
+    return { chapters: newChapters, activeChapterId: newId };
+  }),
+
+  moveChapter: (id, direction) => set((state) => {
+    const index = state.chapters.findIndex(c => c.id === id);
+    if (index === -1) return state;
+    const newIndex = direction === 'up' ? index - 1 : index + 1;
+    if (newIndex < 0 || newIndex >= state.chapters.length) return state;
+    
+    const newChapters = [...state.chapters];
+    const [removed] = newChapters.splice(index, 1);
+    newChapters.splice(newIndex, 0, removed);
+    
+    // Redistribute timelines to match order
+    const segment = 1 / newChapters.length;
+    newChapters.forEach((c, i) => {
+      c.startProgress = i * segment;
+      c.endProgress = (i + 1) * segment;
+    });
+    
+    return { chapters: newChapters };
+  }),
+
+  autoDistributeChapters: () => set((state) => {
+    if (state.chapters.length === 0) return state;
+    const count = state.chapters.length;
+    const segment = 1 / count;
+    const updated = state.chapters.map((c, i) => ({
+      ...c,
+      startProgress: i * segment,
+      endProgress: (i + 1) * segment
+    }));
+    return { chapters: updated };
+  }),
+
+  removeChapter: (id) => set((state) => {
+    const filtered = state.chapters.filter(c => c.id !== id);
+    // Redistribute
+    if (filtered.length > 0) {
+      const segment = 1 / filtered.length;
+      filtered.forEach((c, i) => {
+        c.startProgress = i * segment;
+        c.endProgress = (i + 1) * segment;
+      });
+    }
+    const newActiveId = state.activeChapterId === id ? (filtered[0]?.id || null) : state.activeChapterId;
+    return {
+      chapters: filtered,
+      activeChapterId: newActiveId
+    };
+  }),
+
+  updateChapter: (id, updates) => set((state) => ({
+    chapters: state.chapters.map(c => c.id === id ? { ...c, ...updates } : c)
+  })),
+
+  setActiveChapter: (id) => set({ activeChapterId: id }),
 
   addKeyframe: (kf) => set((state) => ({
-    keyframes: [...state.keyframes, kf].sort((a, b) => a.progress - b.progress)
+    chapters: state.chapters.map(c => c.id === state.activeChapterId 
+      ? { ...c, cameraPath: [...c.cameraPath, kf].sort((a, b) => a.progress - b.progress) } 
+      : c)
   })),
 
   removeKeyframe: (id) => set((state) => ({
-    keyframes: state.keyframes.filter((k) => k.id !== id)
+    chapters: state.chapters.map(c => c.id === state.activeChapterId 
+      ? { ...c, cameraPath: c.cameraPath.filter(k => k.id !== id) } 
+      : c)
   })),
 
   updateKeyframe: (id, updates) => set((state) => ({
-    keyframes: state.keyframes.map((k) => (k.id === id ? { ...k, ...updates } : k))
+    chapters: state.chapters.map(c => c.id === state.activeChapterId 
+      ? { ...c, cameraPath: c.cameraPath.map(k => k.id === id ? { ...k, ...updates } : k) } 
+      : c)
   })),
 
   addSection: (section) => set((state) => ({
-    sections: [...state.sections, section].sort((a, b) => a.progress - b.progress)
+    chapters: state.chapters.map(c => c.id === state.activeChapterId 
+      ? { ...c, narrativeBeats: [...c.narrativeBeats, section].sort((a, b) => a.progress - b.progress) } 
+      : c)
   })),
 
   removeSection: (id) => set((state) => ({
-    sections: state.sections.filter((s) => s.id !== id)
+    chapters: state.chapters.map(c => c.id === state.activeChapterId 
+      ? { ...c, narrativeBeats: c.narrativeBeats.filter(s => s.id !== id) } 
+      : c)
   })),
 
   updateSection: (id, updates) => set((state) => ({
-    sections: state.sections.map((s) => (s.id === id ? { ...s, ...updates } : s))
+    chapters: state.chapters.map(c => {
+      if (c.id !== state.activeChapterId) return c;
+      return {
+        ...c,
+        narrativeBeats: c.narrativeBeats.map(s => {
+          if (s.id !== id) return s;
+          const newStyle = updates.style ? { ...s.style, ...updates.style } : s.style;
+          return { ...s, ...updates, style: newStyle };
+        })
+      };
+    })
   })),
 
   addHotspot: (h) => set((state) => ({
-    hotspots: [...state.hotspots, h],
+    chapters: state.chapters.map(c => c.id === state.activeChapterId 
+      ? { ...c, spatialAnnotations: [...c.spatialAnnotations, h] } 
+      : c),
     isPlacingHotspot: false
   })),
 
   removeHotspot: (id) => set((state) => ({
-    hotspots: state.hotspots.filter(h => h.id !== id)
+    chapters: state.chapters.map(c => c.id === state.activeChapterId 
+      ? { ...c, spatialAnnotations: c.spatialAnnotations.filter(h => h.id !== id) } 
+      : c)
   })),
 
   updateHotspot: (id, updates) => set((state) => ({
-    hotspots: state.hotspots.map(h => h.id === id ? { ...h, ...updates } : h)
+    chapters: state.chapters.map(c => c.id === state.activeChapterId 
+      ? { ...c, spatialAnnotations: c.spatialAnnotations.map(h => h.id === id ? { ...h, ...updates } : h) } 
+      : c)
+  })),
+
+  updateMaterial: (meshName, updates) => set((state) => ({
+    chapters: state.chapters.map(c => {
+      if (c.id !== state.activeChapterId) return c;
+      const current = c.materialOverrides[meshName] || {
+        color: '#ffffff', emissive: '#000000', emissiveIntensity: 0, metalness: 0, roughness: 1, wireframe: false
+      };
+      return {
+        ...c,
+        materialOverrides: {
+          ...c.materialOverrides,
+          [meshName]: { ...current, ...updates }
+        }
+      };
+    })
   })),
 
   setConfig: (configUpdate) => set((state) => ({
-    config: { ...state.config, ...configUpdate }
+    chapters: state.chapters.map(c => c.id === state.activeChapterId 
+      ? { ...c, environment: { ...c.environment, ...configUpdate } } 
+      : c)
   })),
 
-  setCurrentProgress: (progress) => set({ currentProgress: progress }),
-
-  setCameraPosition: (pos) => set({ cameraPosition: pos }),
-
-  setCameraTarget: (target) => set({ cameraTarget: target }),
-
-  setShowHandbook: (show) => set({ showHandbook: show }),
-
-  setIsPlacingHotspot: (isPlacing) => set({ isPlacingHotspot: isPlacing }),
-
   loadProject: (project) => set({
-    config: { ...DEFAULT_CONFIG, ...project.config },
-    keyframes: project.keyframes || [],
-    sections: project.sections || [...DEFAULT_SECTIONS],
-    hotspots: project.hotspots || [],
+    projectName: project.manifest.projectName || 'RESTORED_PROJECT',
+    author: project.manifest.author || 'DESIGN_OPERATOR_01',
+    projectDescription: project.manifest.description || '',
+    chapters: project.chapters,
+    activeChapterId: project.chapters[0]?.id || null,
+    currentProgress: 0,
+    mode: 'edit'
   }),
 
-  reset: () => set({
-    modelUrl: null,
+  reset: () => set(() => ({
     mode: 'edit',
-    keyframes: [],
-    sections: [...DEFAULT_SECTIONS],
-    hotspots: [],
-    config: { ...DEFAULT_CONFIG },
+    performanceTier: 'high',
     currentProgress: 0,
-    cameraPosition: [5, 5, 5],
-    cameraTarget: [0, 0, 0],
-    showHandbook: false,
-    isPlacingHotspot: false
-  }),
+    chapters: [],
+    activeChapterId: null,
+    isPlacingHotspot: false,
+    isLoading: false,
+    isTransitioning: false,
+    transitionProgress: 0,
+    lastAudit: null,
+    selectedMeshName: null,
+    isExporting: false
+  }))
 }));
