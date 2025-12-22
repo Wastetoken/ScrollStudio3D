@@ -16,41 +16,16 @@ import { StorySection } from '../types';
 gsap.registerPlugin(ScrollTrigger);
 
 const App: React.FC = () => {
-  const { mode, currentProgress, chapters, activeChapterId, setMode, isPlacingHotspot, setActiveChapter, setTransitionState, setSelectedMesh, typography } = useStore();
+  const { mode, currentProgress, chapters, activeChapterId, setMode, isPlacingHotspot, setActiveChapter, setTransitionState, setSelectedMesh, typography, cinematicBars } = useStore();
   const transitionTimeline = useRef<gsap.core.Timeline | null>(null);
 
-  // Initialize dynamic font loading
   useFontLoader(typography.fonts);
 
   const currentChapter = useMemo(() => {
-    if (mode === 'edit') return chapters.find(c => c.id === activeChapterId);
-    const found = chapters.find(c => currentProgress >= c.startProgress && currentProgress <= c.endProgress);
-    return found || chapters[0];
+    if (!chapters || chapters.length === 0) return null;
+    if (mode === 'edit') return chapters.find(c => c.id === activeChapterId) || chapters[0];
+    return chapters.find(c => currentProgress >= c.startProgress && currentProgress <= c.endProgress) || chapters[0];
   }, [mode, chapters, activeChapterId, currentProgress]);
-
-  useEffect(() => {
-    if (mode === 'preview' && currentChapter && currentChapter.id !== activeChapterId) {
-      if (transitionTimeline.current) transitionTimeline.current.kill();
-      const config = currentChapter.transition;
-      const duration = (config?.duration || 1200) / 1000;
-      
-      transitionTimeline.current = gsap.timeline({
-        onStart: () => setTransitionState(true, 0),
-        onComplete: () => { setTransitionState(false, 0); transitionTimeline.current = null; }
-      });
-      
-      transitionTimeline.current.to({}, { 
-        duration: duration / 2, 
-        onUpdate: function() { setTransitionState(true, this.progress()); }, 
-        onComplete: () => setActiveChapter(currentChapter.id) 
-      });
-      
-      transitionTimeline.current.to({}, { 
-        duration: duration / 2, 
-        onUpdate: function() { setTransitionState(true, 1 - this.progress()); } 
-      });
-    }
-  }, [currentChapter, mode, activeChapterId, setActiveChapter, setTransitionState]);
 
   useEffect(() => {
     const baseClass = mode === 'preview' ? 'preview-mode' : 'edit-mode';
@@ -58,23 +33,24 @@ const App: React.FC = () => {
     document.body.className = `${baseClass} ${isPlacingHotspot ? 'placing-hotspot' : ''}`.trim();
   }, [mode, isPlacingHotspot]);
 
-  const activeNarrativeBeats = useMemo(() => {
-    if (!currentChapter) return [];
-    const beats = currentChapter.narrativeBeats;
-    return beats.filter((s, i) => {
-      const nextBeat = beats[i + 1];
-      const end = nextBeat ? nextBeat.progress : 1.1;
-      return currentProgress >= s.progress && currentProgress < end;
-    });
-  }, [currentChapter, currentProgress]);
+  const glConfig = useMemo(() => ({
+    antialias: true,
+    alpha: true,
+    powerPreference: 'high-performance' as const,
+  }), []);
 
   const renderSection = (section: StorySection) => {
-    const isActive = activeNarrativeBeats.some(as => as.id === section.id);
+    if (!currentChapter) return null;
+    
+    const beats = currentChapter.narrativeBeats;
+    const idx = beats.findIndex(b => b.id === section.id);
+    if (idx === -1) return null;
+
+    const nextBeat = beats[idx + 1];
+    const end = nextBeat ? nextBeat.progress : 1.1;
+    const isActive = currentProgress >= section.progress && currentProgress < end;
+    
     const { style } = section;
-    
-    // Check if custom font is used
-    const customFont = style.fontFamily ? typography.fonts.find(f => f.id === style.fontFamily) : null;
-    
     const fontClass = {
       display: 'font-black italic uppercase tracking-tighter',
       serif: 'font-serif font-bold italic',
@@ -83,83 +59,30 @@ const App: React.FC = () => {
       brutalist: 'font-black uppercase tracking-[-0.05em] leading-none'
     }[style.fontVariant];
 
-    const alignmentClass = {
-      left: 'text-left items-start',
-      center: 'text-center items-center',
-      right: 'text-right items-end'
-    }[style.textAlign];
-
-    const layoutClass = {
-      split: 'w-1/2',
-      full: 'w-full max-w-7xl',
-      floating: 'max-w-xl'
-    }[style.layout || 'full'];
-
     const animationClasses = {
-      'fade-up': isActive ? 'opacity-100 translate-y-0 scale-100 blur-0' : 'opacity-0 translate-y-12 scale-95 blur-xl',
-      'reveal': isActive ? 'opacity-100 [clip-path:inset(0_0_0_0)]' : 'opacity-0 [clip-path:inset(100%_0_0_0)]',
-      'zoom': isActive ? 'opacity-100 scale-100 blur-0' : 'opacity-0 scale-150 blur-2xl',
+      'fade-up': isActive ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-12 scale-95',
+      'reveal': isActive ? 'opacity-100' : 'opacity-0',
+      'zoom': isActive ? 'opacity-100 scale-100' : 'opacity-0 scale-150',
       'slide-left': isActive ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-24'
     }[style.entryAnimation || 'fade-up'];
-
-    const themeStyles = {
-      glass: {
-        background: 'rgba(0, 0, 0, 0.4)',
-        backdropFilter: `blur(${style.backdropBlur || 30}px)`,
-        border: `${style.borderWeight || 1}px solid rgba(255, 255, 255, 0.1)`,
-        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)'
-      },
-      solid: {
-        background: style.accentColor || '#111111',
-        border: `${style.borderWeight || 0}px solid transparent`,
-      },
-      outline: {
-        background: 'transparent',
-        border: `${style.borderWeight || 2}px solid ${style.accentColor || '#ffffff'}`,
-      },
-      none: {
-        background: 'transparent',
-        border: 'none',
-        backdropFilter: 'none',
-        boxShadow: 'none'
-      }
-    }[style.theme || 'glass'];
 
     return (
       <div 
         key={section.id} 
-        className={`absolute inset-0 flex flex-col justify-center transition-all duration-[1200ms] ease-out ${alignmentClass} ${animationClasses} ${isActive ? '' : 'pointer-events-none'}`}
+        className={`fixed inset-0 flex flex-col justify-center transition-all duration-1000 pointer-events-none ${animationClasses}`}
+        style={{ zIndex: 50 + idx }}
       >
-        <div className={`px-12 ${layoutClass}`}>
+        <div className={`px-12 w-full max-w-7xl mx-auto flex flex-col ${style.textAlign === 'center' ? 'items-center text-center' : (style.textAlign === 'right' ? 'items-end text-right' : 'items-start text-left')}`}>
           <div 
-            className="transition-all duration-700 overflow-hidden"
+            className="p-10 rounded-[2.5rem]"
             style={{ 
-              ...themeStyles,
-              borderRadius: `${style.borderRadius || 30}px`,
-              padding: `${style.padding || 40}px`,
+              background: style.theme === 'glass' ? 'rgba(0,0,0,0.5)' : (style.theme === 'solid' ? style.accentColor : 'transparent'),
+              backdropFilter: style.theme === 'glass' ? `blur(${style.backdropBlur}px)` : 'none',
+              border: style.theme === 'outline' ? `${style.borderWeight}px solid ${style.accentColor}` : 'none',
             }}
           >
-            <h2 
-              className={`text-6xl md:text-8xl mb-6 leading-[0.9] ${customFont ? '' : fontClass}`}
-              style={{ 
-                color: style.titleColor,
-                fontFamily: customFont ? `'${customFont.name}', ${customFont.fallback || 'sans-serif'}` : undefined,
-                textShadow: style.textGlow ? `0 0 30px ${style.titleColor}44` : 'none',
-                letterSpacing: style.letterSpacing === 'tight' ? '-0.05em' : style.letterSpacing === 'wide' ? '0.1em' : style.letterSpacing === 'ultra' ? '0.3em' : 'normal'
-              }}
-            >
-              {section.title}
-            </h2>
-            <p 
-              className={`text-lg md:text-xl font-medium leading-relaxed max-w-2xl ${style.textAlign === 'center' ? 'mx-auto' : ''}`}
-              style={{ 
-                color: style.descriptionColor,
-                fontFamily: customFont ? `'${customFont.name}', ${customFont.fallback || 'sans-serif'}` : undefined,
-                fontWeight: style.fontWeight === 'thin' ? 200 : style.fontWeight === 'bold' ? 700 : style.fontWeight === 'black' ? 900 : 400
-              }}
-            >
-              {section.description}
-            </p>
+            <h2 className={`text-6xl md:text-8xl mb-6 ${fontClass}`} style={{ color: style.titleColor }}>{section.title}</h2>
+            <p className="text-xl max-w-2xl" style={{ color: style.descriptionColor }}>{section.description}</p>
           </div>
         </div>
       </div>
@@ -168,11 +91,11 @@ const App: React.FC = () => {
 
   return (
     <div className={`w-full relative bg-[#050505] ${mode === 'preview' ? 'min-h-[1000vh]' : 'h-screen overflow-hidden'}`}>
-      <div className={`fixed inset-0 z-0`}>
+      <div className="fixed inset-0 z-0">
         <Canvas 
           shadows 
           dpr={[1, 2]} 
-          gl={{ antialias: true, alpha: true }}
+          gl={glConfig}
           onPointerMissed={() => setSelectedMesh(null)}
         >
           <Suspense fallback={null}>
@@ -182,27 +105,25 @@ const App: React.FC = () => {
         </Canvas>
       </div>
 
-      {chapters.length === 0 && <Uploader />}
+      {(!chapters || chapters.length === 0) && <Uploader />}
       <Handbook />
       <ExportOverlay />
       
-      {mode === 'edit' && chapters.length > 0 && (
-        <div className="relative z-[100] w-full h-full pointer-events-none">
-          <div className="pointer-events-auto">
-            <Sidebar />
-            <Timeline />
-          </div>
-        </div>
+      {mode === 'edit' && chapters && chapters.length > 0 && (
+        <>
+          <Sidebar />
+          <Timeline />
+        </>
       )}
 
       {mode === 'preview' && (
-        <div className="relative z-[100] w-full">
+        <div className="relative z-[150] w-full">
           <div className="fixed inset-0 pointer-events-none">
-            {currentChapter?.narrativeBeats.map(renderSection)}
+            {currentChapter?.narrativeBeats?.map(renderSection)}
           </div>
-          <div className="fixed top-8 left-8 z-[200] pointer-events-auto">
-             <button onClick={() => setMode('edit')} className="bg-black/60 backdrop-blur-3xl border border-white/10 text-white px-8 py-4 rounded-full text-[10px] font-black uppercase tracking-widest transition-all hover:bg-white hover:text-black hover:scale-105 active:scale-95">
-               <i className="fa-solid fa-arrow-left mr-2"></i> Studio
+          <div className="fixed top-12 left-12 z-[200] pointer-events-auto">
+             <button onClick={() => setMode('edit')} className="bg-white text-black px-10 py-4 rounded-full text-[10px] font-black uppercase tracking-widest shadow-2xl">
+               <i className="fa-solid fa-arrow-left mr-3"></i> Studio Mode
              </button>
           </div>
         </div>

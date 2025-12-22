@@ -1,4 +1,3 @@
-
 import React, { useCallback, useRef, useTransition, useState } from 'react';
 import { useStore } from '../useStore';
 import * as THREE from 'three';
@@ -21,13 +20,6 @@ export const Uploader: React.FC = () => {
       return;
     }
 
-    const isGltf = mainFile.name.toLowerCase().endsWith('.gltf');
-    if (isGltf && fileList.length === 1) {
-      // Warn about potential missing sidecars if only one gltf file is selected
-      // We don't block it because it might be a self-contained gltf, but we warn.
-      console.warn("Uploading a .gltf without its .bin or textures may fail.");
-    }
-
     // Three.js LoadingManager for multi-file support
     const manager = new THREE.LoadingManager();
     const objectURLs: string[] = [];
@@ -47,10 +39,6 @@ export const Uploader: React.FC = () => {
       return url;
     });
 
-    // For Drei's useGLTF, we can't easily pass a custom manager without more work,
-    // but for local blob URLs of .glb files, it works perfectly.
-    // For .gltf with external refs, we encourage using .glb for this platform.
-    
     const extension = mainFile.name.split('.').pop()?.toLowerCase() || 'glb';
     const mainUrl = fileMap.get(mainFile.name) + `#.${extension}`;
     
@@ -71,25 +59,30 @@ export const Uploader: React.FC = () => {
       const reader = new FileReader();
       reader.onload = (event) => {
         try {
-          const project = JSON.parse(event.target?.result as string);
-          if (project.manifest && project.chapters) {
+          const projectData = JSON.parse(event.target?.result as string);
+          if (projectData.manifest && projectData.chapters) {
             startTransition(() => {
-              loadProject(project);
+              setLocalError(null);
+              setEngineError(null);
+              loadProject(projectData);
             });
           } else {
             setLocalError("Invalid Project Schema: Missing manifest or chapters.");
           }
         } catch (err) {
+          console.error("Parse Error:", err);
           setLocalError("Could not parse Project JSON. Ensure you are uploading a valid export.");
         }
       };
       reader.readAsText(file);
       if (projectInputRef.current) projectInputRef.current.value = '';
     }
-  }, [loadProject]);
+  }, [loadProject, setEngineError]);
 
   const trySample = () => {
     startTransition(() => {
+      setLocalError(null);
+      setEngineError(null);
       // Using a guaranteed working sample from Khronos Group
       const sampleUrl = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/DamagedHelmet/glTF-Binary/DamagedHelmet.glb';
       addChapter(sampleUrl, 'DAMAGED_HELMET_SAMPLE');

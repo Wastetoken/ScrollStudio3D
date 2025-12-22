@@ -1,31 +1,31 @@
 import { create } from 'zustand';
-import { StoreState, EngineMode, SceneConfig, SceneChapter, StorySection, Hotspot, StorySectionStyle, ProjectSchema, Keyframe, TransitionConfig, AssetAudit, PerformanceTier, MaterialOverride, FontDefinition } from './types';
+import { StoreState, EngineMode, SceneConfig, SceneChapter, StorySection, Hotspot, StorySectionStyle, ProjectSchema, Keyframe, TransitionConfig, AssetAudit, PerformanceTier, MaterialOverride, FontDefinition, ViewMode } from './types';
 
 const DEFAULT_CONFIG: SceneConfig = {
   modelScale: 1,
-  ambientIntensity: 0.3,
-  directionalIntensity: 0.8,
+  ambientIntensity: 0.5,
+  directionalIntensity: 1.5,
   modelPosition: [0, 0, 0],
   modelRotation: [0, 0, 0],
-  showFloor: false,
-  backgroundColor: '#050505',
-  bloomIntensity: 1.5,
-  bloomThreshold: 0.9,
-  exposure: 1.0,
-  fogDensity: 0.02,
-  fogColor: '#050505',
+  showFloor: true,
+  backgroundColor: '#030303',
+  bloomIntensity: 2.5,
+  bloomThreshold: 0.1, 
+  exposure: 1.2,
+  fogDensity: 0.1,
+  fogColor: '#030303',
   focusDistance: 5.0,
-  aperture: 0.025,
-  bokehScale: 1.0,
-  defaultFov: 35,
+  aperture: 0.05,
+  bokehScale: 2.5,
+  defaultFov: 40,
   grainIntensity: 0.05,
   cameraShake: 0.1,
-  chromaticAberration: 0.002,
+  chromaticAberration: 0.005,
   scanlineIntensity: 0.1,
-  vignetteDarkness: 1.1,
-  ambientGlowColor: '#111111',
+  vignetteDarkness: 1.2,
+  ambientGlowColor: '#1a1a1a',
   splineAlpha: 0.5,
-  envMapIntensity: 1.0,
+  envMapIntensity: 1.5,
   envPreset: 'studio'
 };
 
@@ -35,14 +35,34 @@ const DEFAULT_TRANSITION: TransitionConfig = {
   intensity: 1.0
 };
 
+const DEFAULT_BEAT_STYLE: StorySectionStyle = {
+  titleColor: '#ffffff',
+  descriptionColor: '#888888',
+  textAlign: 'left',
+  fontVariant: 'display',
+  theme: 'glass',
+  accentColor: '#ffffff',
+  layout: 'full',
+  letterSpacing: 'normal',
+  fontWeight: 'bold',
+  textGlow: true,
+  borderWeight: 1,
+  borderRadius: 30,
+  padding: 40,
+  backdropBlur: 30,
+  entryAnimation: 'fade-up'
+};
+
 export const useStore = create<StoreState & { 
   autoDistributeChapters: () => void;
   duplicateChapter: (id: string) => void;
   moveChapter: (id: string, direction: 'up' | 'down') => void;
+  setNarrativeBeats: (beats: StorySection[]) => void;
   isExporting: boolean;
   setIsExporting: (isExporting: boolean) => void;
 }>((set) => ({
   mode: 'edit',
+  viewMode: 'cinema',
   performanceTier: 'high',
   currentProgress: 0,
   showHandbook: false,
@@ -68,7 +88,8 @@ export const useStore = create<StoreState & {
   setPerformanceTier: (tier) => set({ performanceTier: tier }),
   setTransitionState: (isTransitioning, progress) => set({ isTransitioning, transitionProgress: progress }),
   setProjectInfo: (info) => set((state) => ({ ...state, ...info })),
-  setMode: (mode) => set({ mode }),
+  setMode: (mode) => set({ mode, viewMode: mode === 'preview' ? 'cinema' : 'cinema' }),
+  setViewMode: (vMode) => set({ viewMode: vMode }),
   setCurrentProgress: (progress) => set({ currentProgress: progress }),
   setIsLoading: (isLoading) => set({ isLoading }),
   setEngineError: (error) => set({ engineError: error }),
@@ -95,7 +116,6 @@ export const useStore = create<StoreState & {
     };
     const newChapters = [...state.chapters, newChapter];
     
-    // Auto-redistribute if multiple chapters exist to fill [0,1]
     const count = newChapters.length;
     const segment = 1 / count;
     newChapters.forEach((c, i) => {
@@ -106,7 +126,7 @@ export const useStore = create<StoreState & {
     return {
       chapters: newChapters,
       activeChapterId: id,
-      engineError: null // Clear previous errors on new chapter add
+      engineError: null
     };
   }),
 
@@ -122,7 +142,6 @@ export const useStore = create<StoreState & {
     const newChapters = [...state.chapters];
     newChapters.splice(index + 1, 0, copy);
     
-    // Redistribute
     const segment = 1 / newChapters.length;
     newChapters.forEach((c, i) => {
       c.startProgress = i * segment;
@@ -142,7 +161,6 @@ export const useStore = create<StoreState & {
     const [removed] = newChapters.splice(index, 1);
     newChapters.splice(newIndex, 0, removed);
     
-    // Redistribute timelines to match order
     const segment = 1 / newChapters.length;
     newChapters.forEach((c, i) => {
       c.startProgress = i * segment;
@@ -166,7 +184,6 @@ export const useStore = create<StoreState & {
 
   removeChapter: (id) => set((state) => {
     const filtered = state.chapters.filter(c => c.id !== id);
-    // Redistribute
     if (filtered.length > 0) {
       const segment = 1 / filtered.length;
       filtered.forEach((c, i) => {
@@ -206,9 +223,15 @@ export const useStore = create<StoreState & {
       : c)
   })),
 
-  addSection: (section) => set((state) => ({
-    chapters: state.chapters.map(c => c.id === state.activeChapterId 
+  addSection: (section) => set((setState) => ({
+    chapters: setState.chapters.map(c => c.id === setState.activeChapterId 
       ? { ...c, narrativeBeats: [...c.narrativeBeats, section].sort((a, b) => a.progress - b.progress) } 
+      : c)
+  })),
+
+  setNarrativeBeats: (beats) => set((state) => ({
+    chapters: state.chapters.map(c => c.id === state.activeChapterId 
+      ? { ...c, narrativeBeats: beats.map(b => ({ ...b, style: { ...DEFAULT_BEAT_STYLE, ...b.style } })) } 
       : c)
   })),
 
@@ -239,16 +262,20 @@ export const useStore = create<StoreState & {
     isPlacingHotspot: false
   })),
 
-  removeHotspot: (id) => set((state) => ({
-    chapters: state.chapters.map(c => c.id === state.activeChapterId 
+  removeHotspot: (id) => set((idState) => ({
+    chapters: idState.chapters.map(c => c.id === idState.activeChapterId 
       ? { ...c, spatialAnnotations: c.spatialAnnotations.filter(h => h.id !== id) } 
       : c)
   })),
 
   updateHotspot: (id, updates) => set((state) => ({
-    chapters: state.chapters.map(c => c.id === state.activeChapterId 
-      ? { ...c, spatialAnnotations: c.spatialAnnotations.map(h => h.id === id ? { ...h, ...updates } : h) } 
-      : c)
+    chapters: state.chapters.map(c => {
+      if (c.id !== state.activeChapterId) return c;
+      return {
+        ...c,
+        spatialAnnotations: c.spatialAnnotations.map(h => h.id === id ? { ...h, ...updates } : h)
+      };
+    })
   })),
 
   updateMaterial: (meshName, updates) => set((state) => ({
@@ -287,20 +314,43 @@ export const useStore = create<StoreState & {
     }
   })),
 
-  loadProject: (project) => set({
-    projectName: project.manifest.projectName || 'RESTORED_PROJECT',
-    author: project.manifest.author || 'DESIGN_OPERATOR_01',
-    projectDescription: project.manifest.description || '',
-    chapters: project.chapters,
-    typography: project.typography || { fonts: [] },
-    activeChapterId: project.chapters[0]?.id || null,
-    currentProgress: 0,
-    mode: 'edit',
-    engineError: null
-  }),
+  loadProject: (project) => {
+    const chapters = project.chapters.map(c => {
+      if (project.embeddedAssets && project.embeddedAssets[c.id]) {
+        try {
+          const base64 = project.embeddedAssets[c.id];
+          const binary = atob(base64.split(',')[1] || base64);
+          const bytes = new Uint8Array(binary.length);
+          for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+          const blob = new Blob([bytes], { type: 'model/gltf-binary' });
+          const url = URL.createObjectURL(blob) + '#.glb';
+          return { ...c, modelUrl: url };
+        } catch (e) {
+          console.error("Failed to decode embedded asset for chapter:", c.id, e);
+        }
+      }
+      return c;
+    });
+
+    const firstChapter = chapters[0];
+    set({
+      projectName: project.manifest.projectName || 'RESTORED_PROJECT',
+      author: project.manifest.author || 'DESIGN_OPERATOR_01',
+      projectDescription: project.manifest.description || '',
+      chapters: chapters,
+      typography: project.typography || { fonts: [] },
+      activeChapterId: firstChapter?.id || null,
+      currentProgress: 0,
+      mode: 'edit',
+      viewMode: 'cinema',
+      engineError: null,
+      isLoading: false
+    });
+  },
 
   reset: () => set(() => ({
     mode: 'edit',
+    viewMode: 'cinema',
     performanceTier: 'high',
     currentProgress: 0,
     chapters: [],

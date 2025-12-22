@@ -1,3 +1,4 @@
+
 export type Vector3Array = [number, number, number];
 export type QuaternionArray = [number, number, number, number];
 
@@ -6,7 +7,7 @@ export type EnvironmentPreset = 'studio' | 'city' | 'forest' | 'apartment' | 'ni
 
 export interface TransitionConfig {
   type: TransitionType;
-  duration: number; // in milliseconds
+  duration: number;
   intensity: number;
   color?: string;
 }
@@ -28,6 +29,7 @@ export interface AssetAudit {
 }
 
 export type PerformanceTier = 'ultra' | 'high' | 'mobile' | 'emergency';
+export type ViewMode = 'cinema' | 'free';
 
 export interface Hotspot {
   id: string;
@@ -43,11 +45,11 @@ export interface FontDefinition {
   id: string;
   name: string;
   source: 'cdn' | 'local';
-  url?: string;           // For CDN fonts
-  localPath?: string;     // For local fonts
+  url?: string;
+  localPath?: string;
   weights?: number[];
   fallback?: string;
-  data?: string;          // NEW: Base64 data for builder runtime preview
+  data?: string;
 }
 
 export interface TypographyConfig {
@@ -56,6 +58,7 @@ export interface TypographyConfig {
 
 export interface StoreState {
   mode: EngineMode;
+  viewMode: ViewMode;
   performanceTier: PerformanceTier;
   currentProgress: number;
   showHandbook: boolean;
@@ -65,7 +68,6 @@ export interface StoreState {
   selectedMeshName: string | null;
   cinematicBars: boolean;
   
-  // Transition State
   isTransitioning: boolean;
   transitionProgress: number; 
 
@@ -74,7 +76,7 @@ export interface StoreState {
   projectDescription: string;
 
   chapters: SceneChapter[];
-  typography: TypographyConfig; // NEW
+  typography: TypographyConfig;
   activeChapterId: string | null;
   lastAudit: AssetAudit | null;
 
@@ -82,6 +84,7 @@ export interface StoreState {
   setTransitionState: (isTransitioning: boolean, progress: number) => void;
   setProjectInfo: (info: { projectName?: string, author?: string, projectDescription?: string }) => void;
   setMode: (mode: EngineMode) => void;
+  setViewMode: (vMode: ViewMode) => void;
   setCurrentProgress: (progress: number) => void;
   setIsLoading: (isLoading: boolean) => void;
   setEngineError: (error: string | null) => void;
@@ -109,8 +112,8 @@ export interface StoreState {
   setConfig: (config: Partial<SceneConfig>) => void;
   setAudit: (audit: AssetAudit) => void;
 
-  addFont: (font: FontDefinition) => void; // NEW
-  removeFont: (fontId: string) => void;     // NEW
+  addFont: (font: FontDefinition) => void;
+  removeFont: (fontId: string) => void;
 
   loadProject: (project: ProjectSchema) => void;
   reset: () => void;
@@ -130,7 +133,7 @@ export interface StorySectionStyle {
   descriptionColor: string;
   textAlign: 'left' | 'center' | 'right';
   fontVariant: 'serif' | 'sans' | 'mono' | 'display' | 'brutalist';
-  fontFamily?: string; // NEW: Font ID reference
+  fontFamily?: string;
   theme: 'glass' | 'solid' | 'outline' | 'none';
   accentColor: string;
   layout: 'split' | 'full' | 'floating';
@@ -207,6 +210,7 @@ export interface ProjectSchema {
     license: string;
     audit?: AssetAudit;
   };
-  typography?: TypographyConfig; // NEW
+  typography?: TypographyConfig;
   chapters: SceneChapter[];
+  embeddedAssets?: Record<string, string>; // Optional base64-embedded 3D assets for portable exports
 }

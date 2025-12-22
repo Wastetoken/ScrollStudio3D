@@ -5,35 +5,52 @@ import JSZip from 'jszip';
 export const ExportOverlay: React.FC = () => {
   const { isExporting, setIsExporting, projectName, chapters, author, projectDescription, typography } = useStore();
   const [copied, setCopied] = useState<'json' | 'code' | null>(null);
-  const [isZipping, setIsZipping] = useState(false);
+  const [embedAssets, setEmbedAssets] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   if (!isExporting) return null;
 
-  const projectData = {
-    manifest: {
-      projectName,
-      author,
-      description: projectDescription,
-      createdAt: new Date().toISOString(),
-      lastModified: new Date().toISOString(),
-      engineVersion: "2.6.0",
-      license: "MIT"
-    },
-    typography: {
-      fonts: typography.fonts.map(f => ({
-        id: f.id,
-        name: f.name,
-        source: f.source,
-        url: f.url,
-        localPath: f.localPath,
-        weights: f.weights,
-        fallback: f.fallback
-      }))
-    },
-    chapters: chapters.map(c => ({
-      ...c,
-      modelUrl: c.modelUrl.startsWith('blob:') ? 'PASTE_REMOTE_ASSET_URL_HERE' : c.modelUrl
-    }))
+  const getProjectData = async (shouldEmbed: boolean) => {
+    const embeddedAssets: Record<string, string> = {};
+
+    if (shouldEmbed) {
+      setIsProcessing(true);
+      for (const chapter of chapters) {
+        if (chapter.modelUrl.startsWith('blob:') || chapter.modelUrl.startsWith('http')) {
+          try {
+            const response = await fetch(chapter.modelUrl);
+            const blob = await response.blob();
+            const base64 = await new Promise<string>((resolve) => {
+              const reader = new FileReader();
+              reader.onloadend = () => resolve(reader.result as string);
+              reader.readAsDataURL(blob);
+            });
+            embeddedAssets[chapter.id] = base64;
+          } catch (e) {
+            console.error("Failed to embed asset:", chapter.modelUrl, e);
+          }
+        }
+      }
+      setIsProcessing(false);
+    }
+
+    return {
+      manifest: {
+        projectName,
+        author,
+        description: projectDescription,
+        createdAt: new Date().toISOString(),
+        engineVersion: "2.6.0"
+      },
+      typography: {
+        fonts: typography.fonts || []
+      },
+      chapters: chapters.map(c => ({
+        ...c,
+        modelUrl: c.modelUrl.startsWith('blob:') && !shouldEmbed ? 'PASTE_REMOTE_ASSET_URL_HERE' : c.modelUrl
+      })),
+      embeddedAssets: shouldEmbed ? embeddedAssets : undefined
+    };
   };
 
   const usageSnippet = `import { ScrollyEngine } from './ScrollyEngine';
@@ -41,176 +58,71 @@ import projectData from './project.json';
 
 export default function App() {
   return (
-    <main style={{ width: '100vw', height: '100vh' }}>
+    <div style={{ width: '100vw', height: '100vh' }}>
       <ScrollyEngine data={projectData} />
-    </main>
+    </div>
   );
 }`;
 
-  const handleCopy = (type: 'json' | 'code') => {
-    const text = type === 'json' ? JSON.stringify(projectData, null, 2) : usageSnippet;
-    navigator.clipboard.writeText(text);
-    setCopied(type);
-    setTimeout(() => setCopied(null), 2000);
-  };
-
-  const handleZipExport = async () => {
-    setIsZipping(true);
-    try {
-      const zip = new JSZip();
-      
-      // Add project.json
-      zip.file("project.json", JSON.stringify(projectData, null, 2));
-      
-      // Add fonts folder if there are local fonts
-      const localFonts = typography.fonts.filter(f => f.source === 'local' && f.data);
-      if (localFonts.length > 0) {
-        const fontFolder = zip.folder("fonts");
-        for (const font of localFonts) {
-          if (!font.data || !font.localPath) continue;
-          // Extract base64 part
-          const base64Data = font.data.split(',')[1];
-          const fileName = font.localPath.split('/').pop() || "font.woff2";
-          fontFolder?.file(fileName, base64Data, { base64: true });
-        }
-      }
-
-      const content = await zip.generateAsync({ type: "blob" });
-      const url = URL.createObjectURL(content);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${projectName.toLowerCase()}_bundle.zip`;
-      a.click();
-    } catch (err) {
-      console.error("Bundling failed:", err);
-      alert("Failed to create ZIP bundle.");
-    } finally {
-      setIsZipping(false);
-    }
+  const handleDownloadJson = async () => {
+    setIsProcessing(true);
+    const data = await getProjectData(embedAssets);
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${projectName.toLowerCase()}.json`;
+    a.click();
+    setIsProcessing(false);
   };
 
   return (
-    <div className="fixed inset-0 z-[1000] flex items-center justify-center p-6 md:p-12 animate-in fade-in duration-300">
-      <div className="absolute inset-0 bg-black/90 backdrop-blur-2xl" onClick={() => setIsExporting(false)} />
+    <div className="fixed inset-0 z-[1000] flex items-center justify-center p-6 animate-in fade-in duration-300">
+      <div className="absolute inset-0 bg-black/95 backdrop-blur-3xl" onClick={() => setIsExporting(false)} />
       
-      <div className="relative w-full max-w-6xl glass-panel rounded-[3.5rem] border-white/20 shadow-[0_0_150px_rgba(0,0,0,0.9)] overflow-hidden flex flex-col max-h-[90vh]">
-        <div className="p-10 border-b border-white/10 flex justify-between items-center bg-white/5">
-          <div className="space-y-1">
-            <h2 className="text-3xl font-black italic uppercase tracking-tighter text-white">Production Pipeline</h2>
-            <p className="text-[10px] text-white/40 uppercase font-bold tracking-[0.3em]">Runtime Engine v2.6 • Deployment Ready</p>
+      <div className="relative w-full max-w-4xl glass-panel rounded-[3rem] border-white/20 shadow-2xl overflow-hidden flex flex-col">
+        <div className="p-8 border-b border-white/10 flex justify-between items-center">
+          <div>
+            <h2 className="text-2xl font-black uppercase tracking-tight text-white italic">Export Pipeline</h2>
+            <p className="text-[10px] text-white/40 uppercase font-bold">Project State Serialization</p>
           </div>
-          <button 
-            onClick={() => setIsExporting(false)}
-            className="w-12 h-12 rounded-full bg-white/5 hover:bg-white text-white hover:text-black flex items-center justify-center transition-all group"
-          >
-            <i className="fa-solid fa-xmark transition-transform group-hover:rotate-90"></i>
-          </button>
+          <button onClick={() => setIsExporting(false)} className="w-10 h-10 rounded-full bg-white/5 text-white flex items-center justify-center"><i className="fa-solid fa-xmark"></i></button>
         </div>
 
-        <div className="flex-1 p-10 overflow-y-auto no-scrollbar space-y-12">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-            
+        <div className="p-10 space-y-10 overflow-y-auto no-scrollbar">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div className="space-y-6">
-              <div className="flex items-center gap-4">
-                <div className="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center text-black font-black text-xs">1</div>
-                <h3 className="text-sm font-black uppercase tracking-widest text-emerald-400">Data Manifest</h3>
+              <h3 className="text-xs font-black uppercase text-emerald-400">Data & Assets</h3>
+              <div className="flex items-center gap-3 p-4 bg-white/5 rounded-2xl border border-white/5 transition-all hover:bg-white/10">
+                <input type="checkbox" id="embed-cb" checked={embedAssets} onChange={e => setEmbedAssets(e.target.checked)} className="w-4 h-4 accent-emerald-500" />
+                <label htmlFor="embed-cb" className="text-[10px] text-white font-bold uppercase cursor-pointer">Embed Models in JSON (Self-Contained)</label>
               </div>
-              <p className="text-xs text-white/40 leading-relaxed">
-                Copy your project configuration. Save this as <code className="text-white font-mono bg-white/5 px-2 py-0.5 rounded">project.json</code> in your project's source folder.
-              </p>
-              <div className="relative group">
-                <div className="bg-black/40 rounded-3xl p-6 border border-white/5 max-h-64 overflow-auto font-mono text-[10px] text-emerald-300/60 no-scrollbar">
-                   <pre>{JSON.stringify(projectData, null, 2)}</pre>
-                </div>
-                <div className="absolute top-4 right-4 flex gap-2">
-                  <button 
-                    onClick={() => handleCopy('json')}
-                    className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${copied === 'json' ? 'bg-emerald-500 text-black' : 'bg-white/10 text-white hover:bg-white hover:text-black'}`}
-                  >
-                    {copied === 'json' ? 'Copied!' : 'Copy JSON'}
-                  </button>
-                </div>
-              </div>
+              <button onClick={handleDownloadJson} disabled={isProcessing} className="w-full py-4 bg-white text-black text-[10px] font-black uppercase tracking-widest rounded-2xl transition-all hover:bg-emerald-400 shadow-xl active:scale-95 disabled:opacity-30">
+                {isProcessing ? <i className="fa-solid fa-spinner animate-spin"></i> : 'Download Project JSON'}
+              </button>
             </div>
 
-            <div className="space-y-6">
-              <div className="flex items-center gap-4">
-                <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-black font-black text-xs">2</div>
-                <h3 className="text-sm font-black uppercase tracking-widest text-blue-400">Implementation</h3>
+            <div className="space-y-4">
+              <h3 className="text-xs font-black uppercase text-blue-400">Implementation</h3>
+              <div className="bg-black/40 rounded-2xl p-6 font-mono text-[9px] text-blue-300/60 border border-white/5 overflow-x-auto">
+                <pre>{usageSnippet}</pre>
               </div>
-              <p className="text-xs text-white/40 leading-relaxed">
-                Import the <code className="text-white">ScrollyEngine</code> component (located in <code className="text-white">components/Player</code>) and pass your data manifest.
-              </p>
-              <div className="relative group">
-                <div className="bg-black/40 rounded-3xl p-6 border border-white/5 font-mono text-[10px] text-blue-300/60">
-                  <pre>{usageSnippet}</pre>
-                </div>
-                <button 
-                  onClick={() => handleCopy('code')}
-                  className={`absolute top-4 right-4 px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${copied === 'code' ? 'bg-blue-500 text-black' : 'bg-white/10 text-white hover:bg-white hover:text-black'}`}
-                >
-                  {copied === 'code' ? 'Copied!' : 'Copy Snippet'}
-                </button>
-              </div>
-            </div>
-
-          </div>
-
-          <div className="p-10 bg-emerald-500/5 rounded-[2.5rem] border border-emerald-500/20 space-y-6 flex flex-col md:flex-row items-center justify-between gap-8">
-            <div className="space-y-3">
-              <div className="flex items-center gap-4">
-                <i className="fa-solid fa-box-archive text-emerald-400"></i>
-                <h4 className="text-xs font-black uppercase tracking-[0.2em] text-white">Project Bundle (ZIP)</h4>
-              </div>
-              <p className="text-[10px] text-white/40 leading-relaxed max-w-xl">
-                Generate a production bundle containing your <code className="text-white">project.json</code> and all <code className="text-white">local font files</code> organized in a subfolder.
-              </p>
-            </div>
-            <button 
-              onClick={handleZipExport}
-              disabled={isZipping}
-              className="px-10 py-4 bg-emerald-500 text-black rounded-2xl text-[11px] font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-2xl shrink-0 flex items-center gap-3 disabled:opacity-50"
-            >
-              {isZipping ? (
-                <>
-                  <i className="fa-solid fa-spinner animate-spin"></i>
-                  Bundling...
-                </>
-              ) : (
-                <>
-                  <i className="fa-solid fa-download"></i>
-                  Download ZIP Bundle
-                </>
-              )}
-            </button>
-          </div>
-
-          <div className="p-10 bg-white/5 rounded-[2.5rem] border border-white/10 space-y-6">
-            <div className="flex items-center gap-4">
-               <i className="fa-solid fa-circle-check text-emerald-400"></i>
-               <h4 className="text-xs font-black uppercase tracking-[0.2em] text-white">Production Checklist</h4>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              <div className="space-y-2">
-                <div className="text-[10px] font-black text-white/80 uppercase tracking-widest">Dependencies</div>
-                <p className="text-[10px] text-white/30 leading-relaxed">Ensure three, @react-three/fiber, @react-three/drei, and @react-three/postprocessing are installed.</p>
-              </div>
-              <div className="space-y-2">
-                <div className="text-[10px] font-black text-white/80 uppercase tracking-widest">Asset Management</div>
-                <p className="text-[10px] text-white/30 leading-relaxed">Replace all <code className="text-emerald-400">blob:</code> URLs with stable CDN links in your JSON.</p>
-              </div>
-              <div className="space-y-2">
-                <div className="text-[10px] font-black text-white/80 uppercase tracking-widest">Fonts</div>
-                <p className="text-[10px] text-white/30 leading-relaxed">If using local fonts, host them in a <code className="text-white">fonts/</code> folder relative to your deployment.</p>
-              </div>
+              <button 
+                onClick={() => {
+                  navigator.clipboard.writeText(usageSnippet);
+                  setCopied('code');
+                  setTimeout(() => setCopied(null), 2000);
+                }}
+                className="w-full py-3 bg-white/5 border border-white/10 text-white text-[10px] font-black uppercase rounded-xl hover:bg-white/10 transition-all"
+              >
+                {copied === 'code' ? 'Copied Snippet!' : 'Copy Implementation Code'}
+              </button>
             </div>
           </div>
         </div>
         
-        <div className="p-8 bg-black/40 border-t border-white/10 flex justify-center">
-           <button onClick={() => setIsExporting(false)} className="px-12 py-4 bg-white text-black rounded-2xl text-[11px] font-black uppercase tracking-[0.3em] hover:scale-105 active:scale-95 transition-all shadow-2xl">
-              Back to Builder
-           </button>
+        <div className="p-6 bg-black/40 border-t border-white/10 flex justify-center">
+           <button onClick={() => setIsExporting(false)} className="text-[10px] font-black uppercase text-white/40 hover:text-white transition-all tracking-widest">Return to Studio</button>
         </div>
       </div>
     </div>

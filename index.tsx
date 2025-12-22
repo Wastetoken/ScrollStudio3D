@@ -8,7 +8,17 @@ if (!rootElement) {
 }
 
 const root = ReactDOM.createRoot(rootElement);
-// Concurrent rendering is enabled by default with createRoot. 
-// StrictMode is omitted to prevent redundant suspension/unsuspension cycles 
-// with useGLTF which can lead to React Error #525.
-root.render(<App />);
+
+// StrictMode is optional in development; disabled by default in production 
+// to avoid double-mounting with useGLTF which can lead to React Error #525.
+const isDev = window.location.hostname === 'localhost';
+
+root.render(
+  isDev ? (
+    <React.StrictMode>
+      <App />
+    </React.StrictMode>
+  ) : (
+    <App />
+  )
+);
