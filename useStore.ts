@@ -1,6 +1,5 @@
-
 import { create } from 'zustand';
-import { StoreState, EngineMode, SceneConfig, SceneChapter, StorySection, Hotspot, StorySectionStyle, ProjectSchema, Keyframe, TransitionConfig, AssetAudit, PerformanceTier, MaterialOverride } from './types';
+import { StoreState, EngineMode, SceneConfig, SceneChapter, StorySection, Hotspot, StorySectionStyle, ProjectSchema, Keyframe, TransitionConfig, AssetAudit, PerformanceTier, MaterialOverride, FontDefinition } from './types';
 
 const DEFAULT_CONFIG: SceneConfig = {
   modelScale: 1,
@@ -61,6 +60,7 @@ export const useStore = create<StoreState & {
   projectDescription: 'A multi-chapter high-fidelity spatial narrative.',
 
   chapters: [],
+  typography: { fonts: [] },
   activeChapterId: null,
   lastAudit: null,
 
@@ -273,11 +273,26 @@ export const useStore = create<StoreState & {
       : c)
   })),
 
+  addFont: (font) => set((state) => ({
+    typography: {
+      ...state.typography,
+      fonts: [...state.typography.fonts, font]
+    }
+  })),
+
+  removeFont: (fontId) => set((state) => ({
+    typography: {
+      ...state.typography,
+      fonts: state.typography.fonts.filter(f => f.id !== fontId)
+    }
+  })),
+
   loadProject: (project) => set({
     projectName: project.manifest.projectName || 'RESTORED_PROJECT',
     author: project.manifest.author || 'DESIGN_OPERATOR_01',
     projectDescription: project.manifest.description || '',
     chapters: project.chapters,
+    typography: project.typography || { fonts: [] },
     activeChapterId: project.chapters[0]?.id || null,
     currentProgress: 0,
     mode: 'edit',
@@ -289,6 +304,7 @@ export const useStore = create<StoreState & {
     performanceTier: 'high',
     currentProgress: 0,
     chapters: [],
+    typography: { fonts: [] },
     activeChapterId: null,
     isPlacingHotspot: false,
     isLoading: false,

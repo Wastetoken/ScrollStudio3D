@@ -1,4 +1,3 @@
-
 import React, { useMemo, Suspense, useState, useLayoutEffect, ReactNode, useEffect } from 'react';
 import * as THREE from 'three';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
@@ -14,11 +13,39 @@ import {
   MeshReflectorMaterial
 } from '@react-three/drei';
 import { EffectComposer, Bloom, Vignette, DepthOfField, ChromaticAberration } from '@react-three/postprocessing';
-import { ProjectSchema, SceneChapter, Hotspot, StorySection } from '../../types';
+import { ProjectSchema, SceneChapter, Hotspot, StorySection, FontDefinition } from '../../types';
 
 interface EngineProps {
   data: ProjectSchema;
 }
+
+/**
+ * FONT LOADER FOR PLAYER
+ */
+const loadPlayerFont = (font: FontDefinition) => {
+  const existingElement = document.getElementById(`font-${font.id}`);
+  if (existingElement) return;
+
+  if (font.source === 'cdn' && font.url) {
+    const link = document.createElement('link');
+    link.id = `font-${font.id}`;
+    link.rel = 'stylesheet';
+    link.href = font.url;
+    document.head.appendChild(link);
+  } else if (font.source === 'local' && font.localPath) {
+    const style = document.createElement('style');
+    style.id = `font-${font.id}`;
+    style.textContent = `
+      @font-face {
+        font-family: '${font.name}';
+        src: url('${font.localPath}') format('woff2');
+        font-weight: ${font.weights?.join(' ') || 'normal'};
+        font-display: swap;
+      }
+    `;
+    document.head.appendChild(style);
+  }
+};
 
 /**
  * PRODUCTION ERROR BOUNDARY
@@ -32,7 +59,6 @@ interface EngineErrorBoundaryState {
   errorDetail?: string;
 }
 
-// Fixed: Explicitly use React.Component and constructor/super to resolve property access errors for setState and props.
 class EngineErrorBoundary extends React.Component<EngineErrorBoundaryProps, EngineErrorBoundaryState> {
   constructor(props: EngineErrorBoundaryProps) {
     super(props);
@@ -301,7 +327,7 @@ const ScrollyRig: React.FC<{ chapters: SceneChapter[]; isMobile: boolean }> = ({
   );
 };
 
-const StoryOverlay: React.FC<{ chapters: SceneChapter[] }> = ({ chapters }) => {
+const StoryOverlay: React.FC<{ chapters: SceneChapter[]; typography?: ProjectSchema['typography'] }> = ({ chapters, typography }) => {
   const scroll = useScroll();
   const [progress, setProgress] = useState(0);
   const allBeats = useMemo(() => chapters.flatMap(c => c.narrativeBeats), [chapters]);
@@ -325,6 +351,9 @@ const StoryOverlay: React.FC<{ chapters: SceneChapter[] }> = ({ chapters }) => {
 
         const { style } = beat;
         
+        // Handle custom font applying
+        const customFont = style.fontFamily && typography?.fonts ? typography.fonts.find(f => f.id === style.fontFamily) : null;
+
         const fontClass = {
           display: 'font-black italic uppercase tracking-tighter',
           serif: 'font-serif font-bold italic',
@@ -332,18 +361,6 @@ const StoryOverlay: React.FC<{ chapters: SceneChapter[] }> = ({ chapters }) => {
           mono: 'font-mono uppercase tracking-[0.2em]',
           brutalist: 'font-black uppercase tracking-[-0.05em]'
         }[style.fontVariant];
-
-        const alignmentClass = {
-          left: 'text-left items-start',
-          center: 'text-center items-center',
-          right: 'text-right items-end'
-        }[style.textAlign];
-
-        const layoutClass = {
-          split: 'w-1/2',
-          full: 'w-full max-w-7xl',
-          floating: 'max-w-xl'
-        }[style.layout || 'full'];
 
         const themeStyles = {
           glass: {
@@ -367,6 +384,8 @@ const StoryOverlay: React.FC<{ chapters: SceneChapter[] }> = ({ chapters }) => {
             boxShadow: 'none'
           }
         }[style.theme || 'glass'];
+
+        const fontFamily = customFont ? `'${customFont.name}', ${customFont.fallback || 'sans-serif'}` : undefined;
 
         return (
           <div 
@@ -393,20 +412,21 @@ const StoryOverlay: React.FC<{ chapters: SceneChapter[] }> = ({ chapters }) => {
                 borderRadius: `${style.borderRadius || 30}px`, 
               }}
             >
-              <h2 style={{ 
+              <h2 className={customFont ? '' : fontClass} style={{ 
                 fontSize: 'clamp(2rem, 8vw, 6rem)', 
                 fontWeight: beat.style.fontWeight === 'black' ? 900 : 700, 
                 textTransform: 'uppercase', 
                 lineHeight: 0.85, 
                 marginBottom: '1.5rem', 
                 fontStyle: 'italic', 
+                fontFamily,
                 letterSpacing: style.letterSpacing === 'ultra' ? '0.3em' : '-0.05em', 
                 color: beat.style.titleColor,
                 textShadow: beat.style.textGlow ? `0 0 40px ${beat.style.titleColor}88` : 'none'
               }}>
                 {beat.title}
               </h2>
-              <p style={{ fontSize: '1.15rem', lineHeight: 1.6, opacity: 0.6, maxWidth: '500px', margin: beat.style.textAlign === 'center' ? '0 auto' : '0', color: beat.style.descriptionColor }}>
+              <p style={{ fontSize: '1.15rem', lineHeight: 1.6, opacity: 0.6, maxWidth: '500px', margin: beat.style.textAlign === 'center' ? '0 auto' : '0', color: beat.style.descriptionColor, fontFamily }}>
                 {beat.description}
               </p>
             </div>
@@ -425,6 +445,13 @@ export const ScrollyEngine: React.FC<EngineProps> = ({ data }) => {
   const prefersReducedMotion = useMemo(() => 
     typeof window !== 'undefined' ? window.matchMedia('(prefers-reduced-motion: reduce)').matches : false
   , []);
+
+  // Initialize production fonts
+  useLayoutEffect(() => {
+    if (data.typography?.fonts) {
+      data.typography.fonts.forEach(loadPlayerFont);
+    }
+  }, [data.typography]);
 
   const pageDepth = useMemo(() => {
     const base = data.chapters.length * 4;
@@ -446,7 +473,7 @@ export const ScrollyEngine: React.FC<EngineProps> = ({ data }) => {
             infinite={false}
           >
             <ScrollyRig chapters={data.chapters} isMobile={isMobile} />
-            <StoryOverlay chapters={data.chapters} />
+            <StoryOverlay chapters={data.chapters} typography={data.typography} />
           </ScrollControls>
         </Canvas>
       </div>

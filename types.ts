@@ -1,4 +1,3 @@
-
 export type Vector3Array = [number, number, number];
 export type QuaternionArray = [number, number, number, number];
 
@@ -40,6 +39,21 @@ export interface Hotspot {
   side: 'left' | 'right' | 'auto';
 }
 
+export interface FontDefinition {
+  id: string;
+  name: string;
+  source: 'cdn' | 'local';
+  url?: string;           // For CDN fonts
+  localPath?: string;     // For local fonts
+  weights?: number[];
+  fallback?: string;
+  data?: string;          // NEW: Base64 data for builder runtime preview
+}
+
+export interface TypographyConfig {
+  fonts: FontDefinition[];
+}
+
 export interface StoreState {
   mode: EngineMode;
   performanceTier: PerformanceTier;
@@ -60,6 +74,7 @@ export interface StoreState {
   projectDescription: string;
 
   chapters: SceneChapter[];
+  typography: TypographyConfig; // NEW
   activeChapterId: string | null;
   lastAudit: AssetAudit | null;
 
@@ -94,6 +109,9 @@ export interface StoreState {
   setConfig: (config: Partial<SceneConfig>) => void;
   setAudit: (audit: AssetAudit) => void;
 
+  addFont: (font: FontDefinition) => void; // NEW
+  removeFont: (fontId: string) => void;     // NEW
+
   loadProject: (project: ProjectSchema) => void;
   reset: () => void;
 }
@@ -112,6 +130,7 @@ export interface StorySectionStyle {
   descriptionColor: string;
   textAlign: 'left' | 'center' | 'right';
   fontVariant: 'serif' | 'sans' | 'mono' | 'display' | 'brutalist';
+  fontFamily?: string; // NEW: Font ID reference
   theme: 'glass' | 'solid' | 'outline' | 'none';
   accentColor: string;
   layout: 'split' | 'full' | 'floating';
@@ -188,5 +207,6 @@ export interface ProjectSchema {
     license: string;
     audit?: AssetAudit;
   };
+  typography?: TypographyConfig; // NEW
   chapters: SceneChapter[];
 }

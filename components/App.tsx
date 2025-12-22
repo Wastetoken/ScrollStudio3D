@@ -1,4 +1,3 @@
-
 import React, { useEffect, useMemo, Suspense, useRef } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { useStore } from '../useStore';
@@ -9,6 +8,7 @@ import { Handbook } from './Studio/Handbook';
 import { Uploader } from '../hooks/Uploader';
 import { KeyframeCapturer } from './Studio/KeyframeCapturer';
 import { ExportOverlay } from './Studio/ExportOverlay';
+import { useFontLoader } from '../hooks/useFontLoader';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { StorySection } from '../types';
@@ -16,8 +16,11 @@ import { StorySection } from '../types';
 gsap.registerPlugin(ScrollTrigger);
 
 const App: React.FC = () => {
-  const { mode, currentProgress, chapters, activeChapterId, setMode, isPlacingHotspot, setActiveChapter, setTransitionState, setSelectedMesh } = useStore();
+  const { mode, currentProgress, chapters, activeChapterId, setMode, isPlacingHotspot, setActiveChapter, setTransitionState, setSelectedMesh, typography } = useStore();
   const transitionTimeline = useRef<gsap.core.Timeline | null>(null);
+
+  // Initialize dynamic font loading
+  useFontLoader(typography.fonts);
 
   const currentChapter = useMemo(() => {
     if (mode === 'edit') return chapters.find(c => c.id === activeChapterId);
@@ -68,6 +71,9 @@ const App: React.FC = () => {
   const renderSection = (section: StorySection) => {
     const isActive = activeNarrativeBeats.some(as => as.id === section.id);
     const { style } = section;
+    
+    // Check if custom font is used
+    const customFont = style.fontFamily ? typography.fonts.find(f => f.id === style.fontFamily) : null;
     
     const fontClass = {
       display: 'font-black italic uppercase tracking-tighter',
@@ -134,9 +140,10 @@ const App: React.FC = () => {
             }}
           >
             <h2 
-              className={`text-6xl md:text-8xl mb-6 leading-[0.9] ${fontClass}`}
+              className={`text-6xl md:text-8xl mb-6 leading-[0.9] ${customFont ? '' : fontClass}`}
               style={{ 
                 color: style.titleColor,
+                fontFamily: customFont ? `'${customFont.name}', ${customFont.fallback || 'sans-serif'}` : undefined,
                 textShadow: style.textGlow ? `0 0 30px ${style.titleColor}44` : 'none',
                 letterSpacing: style.letterSpacing === 'tight' ? '-0.05em' : style.letterSpacing === 'wide' ? '0.1em' : style.letterSpacing === 'ultra' ? '0.3em' : 'normal'
               }}
@@ -147,6 +154,7 @@ const App: React.FC = () => {
               className={`text-lg md:text-xl font-medium leading-relaxed max-w-2xl ${style.textAlign === 'center' ? 'mx-auto' : ''}`}
               style={{ 
                 color: style.descriptionColor,
+                fontFamily: customFont ? `'${customFont.name}', ${customFont.fallback || 'sans-serif'}` : undefined,
                 fontWeight: style.fontWeight === 'thin' ? 200 : style.fontWeight === 'bold' ? 700 : style.fontWeight === 'black' ? 900 : 400
               }}
             >

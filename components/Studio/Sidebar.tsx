@@ -1,6 +1,6 @@
-
 import React, { useState, useRef } from 'react';
 import { useStore } from '../../useStore';
+import { FontDefinition } from '../../types';
 
 export const Sidebar: React.FC = () => {
   const { 
@@ -11,13 +11,15 @@ export const Sidebar: React.FC = () => {
     projectName, removeKeyframe, updateKeyframe,
     setShowHandbook, selectedMeshName, setSelectedMesh, updateMaterial, setConfig,
     isPlacingHotspot, setIsPlacingHotspot, removeHotspot, updateHotspot,
-    setIsExporting
+    setIsExporting, typography, addFont, removeFont
   } = useStore();
   
-  const [activeTab, setActiveTab] = useState<'chapters' | 'path' | 'story' | 'material' | 'hotspots' | 'scene' | 'project'>('chapters');
+  const [activeTab, setActiveTab] = useState<'chapters' | 'path' | 'story' | 'material' | 'hotspots' | 'scene' | 'project' | 'fonts'>('chapters');
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const fontInputRef = useRef<HTMLInputElement>(null);
   const projectInputRef = useRef<HTMLInputElement>(null);
+  const [cdnUrl, setCdnUrl] = useState('');
 
   const activeChapter = chapters.find(c => c.id === activeChapterId);
   
@@ -33,6 +35,43 @@ export const Sidebar: React.FC = () => {
       addChapter(url, file.name.split('.')[0].toUpperCase());
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
+  };
+
+  const handleLocalFontUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const data = event.target?.result as string;
+        const name = file.name.split('.')[0].replace(/[-_]/g, ' ');
+        const id = `font-${Date.now()}`;
+        addFont({
+          id,
+          name,
+          source: 'local',
+          localPath: `./fonts/${file.name}`,
+          data: data, // For builder preview
+          weights: [400],
+          fallback: 'sans-serif'
+        });
+      };
+      reader.readAsDataURL(file);
+      if (fontInputRef.current) fontInputRef.current.value = '';
+    }
+  };
+
+  const handleAddCdnFont = () => {
+    if (!cdnUrl || !cdnUrl.startsWith('http')) return;
+    const name = "CDN Font " + (typography.fonts.filter(f => f.source === 'cdn').length + 1);
+    addFont({
+      id: `cdn-${Date.now()}`,
+      name,
+      source: 'cdn',
+      url: cdnUrl,
+      weights: [400, 700],
+      fallback: 'sans-serif'
+    });
+    setCdnUrl('');
   };
 
   const handleProjectImport = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -65,6 +104,7 @@ export const Sidebar: React.FC = () => {
             { id: 'chapters', icon: 'fa-layer-group', label: 'Scenes' },
             { id: 'path', icon: 'fa-route', label: 'Path' },
             { id: 'story', icon: 'fa-book-open', label: 'Story' },
+            { id: 'fonts', icon: 'fa-font', label: 'Font' },
             { id: 'material', icon: 'fa-palette', label: 'Mat' },
             { id: 'hotspots', icon: 'fa-location-dot', label: 'Pins' },
             { id: 'scene', icon: 'fa-wand-magic-sparkles', label: 'Env' },
@@ -225,8 +265,29 @@ export const Sidebar: React.FC = () => {
                       <div className="grid grid-cols-2 gap-3">
                          <div className="space-y-1">
                            <label className="text-[8px] uppercase font-black text-white/30 tracking-widest">Typeface</label>
-                           <select value={s.style.fontVariant} onChange={e => updateSection(s.id, { style: { ...s.style, fontVariant: e.target.value as any } })} className="bg-black/40 border border-white/10 w-full p-2 rounded-lg text-[9px] text-white outline-none">
-                             <option value="display">Display</option><option value="serif">Serif</option><option value="sans">Sans</option><option value="mono">Mono</option><option value="brutalist">Brutalist</option>
+                           <select 
+                            value={s.style.fontFamily || s.style.fontVariant} 
+                            onChange={e => {
+                              const val = e.target.value;
+                              const isCustom = typography.fonts.some(f => f.id === val);
+                              if (isCustom) {
+                                updateSection(s.id, { style: { ...s.style, fontFamily: val } });
+                              } else {
+                                updateSection(s.id, { style: { ...s.style, fontVariant: val as any, fontFamily: undefined } });
+                              }
+                            }} 
+                            className="bg-black/40 border border-white/10 w-full p-2 rounded-lg text-[9px] text-white outline-none"
+                           >
+                             <optgroup label="System Styles">
+                               <option value="display">Display</option><option value="serif">Serif</option><option value="sans">Sans</option><option value="mono">Mono</option><option value="brutalist">Brutalist</option>
+                             </optgroup>
+                             {typography.fonts.length > 0 && (
+                               <optgroup label="Custom Fonts">
+                                 {typography.fonts.map(f => (
+                                   <option key={f.id} value={f.id}>{f.name}</option>
+                                 ))}
+                               </optgroup>
+                             )}
                            </select>
                          </div>
                          <div className="space-y-1">
@@ -279,6 +340,62 @@ export const Sidebar: React.FC = () => {
                   )}
                 </div>
               ))}
+            </div>
+          )}
+
+          {activeTab === 'fonts' && (
+            <div className="space-y-6 animate-in fade-in duration-300">
+              <div className="space-y-3">
+                 <h5 className="text-[10px] font-black uppercase tracking-widest text-emerald-400">Add Typography</h5>
+                 <div className="flex flex-col gap-2">
+                    <button 
+                      onClick={() => fontInputRef.current?.click()}
+                      className="w-full py-4 bg-white text-black text-[10px] font-black uppercase rounded-[1.2rem] flex items-center justify-center gap-2 hover:bg-gray-100 transition-colors shadow-lg"
+                    >
+                      <i className="fa-solid fa-file-arrow-up text-xs"></i> Upload Local (.woff2)
+                      <input type="file" ref={fontInputRef} onChange={handleLocalFontUpload} accept=".woff2,.woff,.ttf" className="hidden" />
+                    </button>
+                    
+                    <div className="flex gap-2">
+                       <input 
+                        value={cdnUrl} 
+                        onChange={e => setCdnUrl(e.target.value)}
+                        placeholder="Google Fonts CSS URL..." 
+                        className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 text-[10px] text-white outline-none"
+                       />
+                       <button 
+                        onClick={handleAddCdnFont}
+                        className="px-4 py-3 bg-white/10 hover:bg-white hover:text-black rounded-xl text-[10px] font-black transition-all"
+                       >
+                         Add
+                       </button>
+                    </div>
+                 </div>
+              </div>
+
+              <div className="space-y-3 pt-6 border-t border-white/5">
+                 <h5 className="text-[10px] font-black uppercase tracking-widest text-white/40">Active Fonts</h5>
+                 {typography.fonts.length === 0 ? (
+                   <div className="py-12 text-center opacity-20 text-[9px] uppercase font-black tracking-widest italic">No custom fonts added</div>
+                 ) : (
+                   <div className="space-y-2">
+                     {typography.fonts.map(font => (
+                       <div key={font.id} className="p-4 rounded-xl bg-white/5 border border-white/5 flex items-center justify-between group">
+                         <div className="flex flex-col gap-1">
+                            <span className="text-[11px] font-bold text-white" style={{ fontFamily: font.name }}>{font.name}</span>
+                            <span className="text-[8px] uppercase font-black text-white/20 tracking-widest">{font.source} • {font.source === 'cdn' ? 'CDN' : 'Local'}</span>
+                         </div>
+                         <button 
+                          onClick={() => removeFont(font.id)}
+                          className="opacity-0 group-hover:opacity-100 text-white/20 hover:text-red-500 transition-all"
+                         >
+                           <i className="fa-solid fa-trash-can text-xs"></i>
+                         </button>
+                       </div>
+                     ))}
+                   </div>
+                 )}
+              </div>
             </div>
           )}
 
@@ -390,25 +507,6 @@ export const Sidebar: React.FC = () => {
                 </div>
               </div>
 
-              {/* Optics & Lens */}
-              <div className="pt-6 border-t border-white/10 space-y-4">
-                <h6 className="text-[9px] font-black uppercase tracking-widest text-emerald-400">Cinematic Optics</h6>
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-[9px] uppercase font-black text-white/30 tracking-widest">Aperture (Bokeh) <span>{activeChapter.environment.aperture.toFixed(3)}</span></div>
-                    <input type="range" min="0.001" max="0.5" step="0.001" value={activeChapter.environment.aperture} onChange={e => setConfig({ aperture: parseFloat(e.target.value) })} className="w-full h-1 bg-white/10 appearance-none accent-white cursor-pointer" />
-                  </div>
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-[9px] uppercase font-black text-white/30 tracking-widest">Focus Distance <span>{activeChapter.environment.focusDistance.toFixed(2)}</span></div>
-                    <input type="range" min="0.1" max="100" step="0.1" value={activeChapter.environment.focusDistance} onChange={e => setConfig({ focusDistance: parseFloat(e.target.value) })} className="w-full h-1 bg-white/10 appearance-none accent-white cursor-pointer" />
-                  </div>
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-[9px] uppercase font-black text-white/30 tracking-widest">Bokeh Scale <span>{activeChapter.environment.bokehScale.toFixed(1)}</span></div>
-                    <input type="range" min="0" max="20" step="0.5" value={activeChapter.environment.bokehScale} onChange={e => setConfig({ bokehScale: parseFloat(e.target.value) })} className="w-full h-1 bg-white/10 appearance-none accent-white cursor-pointer" />
-                  </div>
-                </div>
-              </div>
-
               {/* Atmosphere & FX */}
               <div className="pt-6 border-t border-white/10 space-y-4">
                 <h6 className="text-[9px] font-black uppercase tracking-widest text-blue-400">Atmosphere & FX</h6>
@@ -420,18 +518,6 @@ export const Sidebar: React.FC = () => {
                   <div className="space-y-2">
                     <div className="flex justify-between text-[9px] uppercase font-black text-white/30 tracking-widest">Bloom Intensity <span>{activeChapter.environment.bloomIntensity.toFixed(1)}</span></div>
                     <input type="range" min="0" max="10" step="0.1" value={activeChapter.environment.bloomIntensity} onChange={e => setConfig({ bloomIntensity: parseFloat(e.target.value) })} className="w-full h-1 bg-white/10 appearance-none accent-white cursor-pointer" />
-                  </div>
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-[9px] uppercase font-black text-white/30 tracking-widest">Bloom Threshold <span>{activeChapter.environment.bloomThreshold.toFixed(2)}</span></div>
-                    <input type="range" min="0" max="1" step="0.01" value={activeChapter.environment.bloomThreshold} onChange={e => setConfig({ bloomThreshold: parseFloat(e.target.value) })} className="w-full h-1 bg-white/10 appearance-none accent-white cursor-pointer" />
-                  </div>
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-[9px] uppercase font-black text-white/30 tracking-widest">Lens Color Bleed <span>{activeChapter.environment.chromaticAberration.toFixed(4)}</span></div>
-                    <input type="range" min="0" max="0.02" step="0.0005" value={activeChapter.environment.chromaticAberration} onChange={e => setConfig({ chromaticAberration: parseFloat(e.target.value) })} className="w-full h-1 bg-white/10 appearance-none accent-white cursor-pointer" />
-                  </div>
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-[9px] uppercase font-black text-white/30 tracking-widest">Vignette <span>{activeChapter.environment.vignetteDarkness.toFixed(1)}</span></div>
-                    <input type="range" min="0" max="5" step="0.1" value={activeChapter.environment.vignetteDarkness} onChange={e => setConfig({ vignetteDarkness: parseFloat(e.target.value) })} className="w-full h-1 bg-white/10 appearance-none accent-white cursor-pointer" />
                   </div>
                 </div>
               </div>
@@ -468,7 +554,7 @@ export const Sidebar: React.FC = () => {
 
                 <button 
                   onClick={() => {
-                    const data = { manifest: { projectName, author: 'DESIGN_OPERATOR_01', lastModified: new Date().toISOString() }, chapters };
+                    const data = { manifest: { projectName, author: 'DESIGN_OPERATOR_01', lastModified: new Date().toISOString() }, chapters, typography };
                     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement('a'); a.href = url; a.download = `${projectName.toLowerCase()}.json`; a.click();
