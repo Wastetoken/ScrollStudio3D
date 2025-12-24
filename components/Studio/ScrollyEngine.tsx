@@ -1,4 +1,3 @@
-
 import React, { useMemo, Suspense, useState, useLayoutEffect, ReactNode, useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
@@ -15,9 +14,8 @@ import {
 } from '@react-three/drei';
 import { EffectComposer, Bloom, Vignette, DepthOfField, ChromaticAberration } from '@react-three/postprocessing';
 import { ProjectSchema, SceneChapter, Hotspot, StorySection, FontDefinition } from '../../types';
-import { createCurvesFromKeyframes, interpolateCameraState } from '../../cameraUtils';
+import { createCurvesFromKeyframes, interpolateCameraState } from './cameraUtils';
 
-// R3F Intrinsic Elements workaround for TypeScript environments where global types aren't automatically merged
 const Group = 'group' as any;
 const Primitive = 'primitive' as any;
 const Color = 'color' as any;
@@ -74,8 +72,6 @@ const IndexedChapterModel: React.FC<{ chapter: SceneChapter }> = ({ chapter }) =
 
   useLayoutEffect(() => {
     if (!scene) return;
-    
-    // ATOMIC GROUNDING: Reposition scene so lowest geometry is at Y=0.
     const box = new THREE.Box3().setFromObject(scene);
     const center = new THREE.Vector3();
     box.getCenter(center);
@@ -108,7 +104,6 @@ const IndexedChapterModel: React.FC<{ chapter: SceneChapter }> = ({ chapter }) =
   const { environment: config } = chapter;
 
   return (
-    /* Use Group and Primitive constants for satisfying TypeScript */
     <Group scale={config.modelScale} position={config.modelPosition} rotation={config.modelRotation}>
       <Primitive object={scene} />
     </Group>
@@ -144,9 +139,7 @@ const ScrollyRig: React.FC<{ chapters: SceneChapter[]; isMobile: boolean }> = ({
 
   useLayoutEffect(() => {
     if (gl) gl.toneMappingExposure = config.exposure ?? 1.0;
-    if (camera) camera.up.set(0, 1, 0.000001); // Orientation stability bias
-    
-    // Apply environment intensity directly to the scene object
+    if (camera) camera.up.set(0, 1, 0.000001);
     if (scene) {
       // @ts-ignore
       scene.environmentIntensity = config.envMapIntensity ?? 1.0;
@@ -185,7 +178,6 @@ const ScrollyRig: React.FC<{ chapters: SceneChapter[]; isMobile: boolean }> = ({
   return (
     <>
       <PerspectiveCamera makeDefault fov={config.defaultFov} position={[0, 0, 20]} />
-      {/* Use R3F constants for scene elements */}
       <Color attach="background" args={[config.backgroundColor]} />
       <FogExp2 attach="fog" args={[config.fogColor, (config.fogDensity ?? 0) * 0.1]} />
       <AmbientLight intensity={config.ambientIntensity ?? 0.3} />

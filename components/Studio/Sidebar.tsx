@@ -5,12 +5,14 @@ import { StorySection, FontDefinition } from '../../types';
 export const Sidebar: React.FC = () => {
   const { 
     chapters, activeChapterId, setActiveChapter,
-    mode, setMode, viewMode, setViewMode, currentProgress,
+    mode, setMode, viewMode, setViewMode, currentProgress, setCurrentProgress,
     addChapter, removeChapter, updateChapter, duplicateChapter,
     addSection, removeSection, updateSection,
+    removeKeyframe,
     selectedMeshName, setSelectedMesh, updateMaterial, setConfig,
     typography, addFont, removeFont, setIsExporting,
-    projectName, author, projectDescription, setProjectInfo
+    projectName, author, projectDescription, setProjectInfo,
+    isPlacingHotspot, setIsPlacingHotspot, removeHotspot
   } = useStore();
   
   const [activeTab, setActiveTab] = useState<'chapters' | 'path' | 'story' | 'material' | 'hotspots' | 'typography' | 'fx' | 'settings'>('chapters');
@@ -23,7 +25,10 @@ export const Sidebar: React.FC = () => {
   }, [selectedMeshName]);
 
   const activeChapter = chapters.find(c => c.id === activeChapterId);
-  const activeMaterial = (selectedMeshName && activeChapter) ? activeChapter.materialOverrides[selectedMeshName] || {
+  if (!activeChapter) return null;
+
+  const config = activeChapter.environment;
+  const activeMaterial = (selectedMeshName) ? activeChapter.materialOverrides[selectedMeshName] || {
     color: '#ffffff', emissive: '#000000', emissiveIntensity: 0, metalness: 0, roughness: 1, wireframe: false
   } : null;
 
@@ -75,9 +80,6 @@ export const Sidebar: React.FC = () => {
     addSection(newBeat);
   };
 
-  if (!activeChapter) return null;
-  const config = activeChapter.environment;
-
   return (
     <div className="fixed left-6 top-6 bottom-40 w-80 z-[200] flex flex-col pointer-events-none">
       <div className="glass-panel p-1 rounded-full flex pointer-events-auto shadow-2xl mb-4 border-white/5 shrink-0">
@@ -88,13 +90,14 @@ export const Sidebar: React.FC = () => {
       <div className="glass-panel rounded-[2.5rem] flex-1 pointer-events-auto shadow-2xl flex flex-col min-h-0 border-white/10 overflow-hidden">
         <div className="grid grid-cols-4 gap-0.5 p-2 bg-black/40 border-b border-white/5 shrink-0">
           {[
-            { id: 'chapters', icon: 'fa-layer-group', tip: 'Sectors' },
-            { id: 'path', icon: 'fa-route', tip: 'Path' },
-            { id: 'story', icon: 'fa-book-open', tip: 'Narrative' },
-            { id: 'material', icon: 'fa-palette', tip: 'Materials' },
-            { id: 'typography', icon: 'fa-font', tip: 'Typography' },
-            { id: 'fx', icon: 'fa-wand-magic-sparkles', tip: 'Post-FX' },
-            { id: 'settings', icon: 'fa-gear', tip: 'Settings' }
+            { id: 'chapters', icon: 'fa-layer-group' },
+            { id: 'path', icon: 'fa-route' },
+            { id: 'story', icon: 'fa-book-open' },
+            { id: 'material', icon: 'fa-palette' },
+            { id: 'hotspots', icon: 'fa-location-dot' },
+            { id: 'typography', icon: 'fa-font' },
+            { id: 'fx', icon: 'fa-wand-magic-sparkles' },
+            { id: 'settings', icon: 'fa-gear' }
           ].map((tab) => (
             <button 
               key={tab.id} 
@@ -135,6 +138,52 @@ export const Sidebar: React.FC = () => {
             </div>
           )}
 
+          {activeTab === 'path' && (
+            <div className="space-y-6">
+              <label className="control-label text-blue-500">Path Interpolation</label>
+              <div className="space-y-6 bg-white/5 p-5 rounded-3xl border border-white/5">
+                <div className="space-y-2">
+                  <div className="flex justify-between text-[9px] font-black text-white/40 uppercase">Spline Tension <span>{config.splineAlpha.toFixed(2)}</span></div>
+                  <input type="range" min="0" max="1" step="0.01" value={config.splineAlpha} onChange={e => setConfig({ splineAlpha: parseFloat(e.target.value) })} className="w-full h-1 bg-white/10 appearance-none accent-white rounded-full" />
+                  <p className="text-[8px] text-white/20 uppercase font-bold italic tracking-wider">0: Tight • 0.5: Natural • 1: Sweeping</p>
+                </div>
+                <div className="space-y-3 pt-4 border-t border-white/5">
+                  <span className="text-[9px] font-black text-white/30 uppercase">Captured Nodes</span>
+                  {activeChapter.cameraPath.map(kf => (
+                    <div key={kf.id} className="flex items-center justify-between p-3 bg-black/40 rounded-xl group border border-white/0 hover:border-white/10">
+                      <button onClick={() => setCurrentProgress(kf.progress)} className="text-[10px] font-black text-emerald-400 uppercase tracking-widest hover:text-white">{(kf.progress * 100).toFixed(0)}% Node</button>
+                      <button onClick={() => removeKeyframe(kf.id)} className="text-white/10 hover:text-red-500 transition-all opacity-0 group-hover:opacity-100"><i className="fa-solid fa-trash-can text-[10px]"></i></button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'hotspots' && (
+            <div className="space-y-6">
+              <label className="control-label text-emerald-500">Spatial Anchors</label>
+              <button 
+                onClick={() => setIsPlacingHotspot(!isPlacingHotspot)} 
+                className={`w-full py-4 text-[10px] font-black uppercase tracking-widest rounded-2xl flex items-center justify-center gap-2 transition-all ${isPlacingHotspot ? 'bg-emerald-400 text-black shadow-[0_0_30px_rgba(16,185,129,0.4)] animate-pulse' : 'bg-white/10 text-white border border-white/10 hover:bg-white/20'}`}
+              >
+                <i className={`fa-solid ${isPlacingHotspot ? 'fa-crosshairs' : 'fa-plus'}`}></i>
+                {isPlacingHotspot ? 'Tap Model Surface' : 'Place Anchor'}
+              </button>
+              <div className="space-y-3">
+                {activeChapter.spatialAnnotations.map(h => (
+                  <div key={h.id} className="p-4 bg-white/5 border border-white/10 rounded-2xl group">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-[9px] font-black text-white/40 uppercase">Anchor @ {(h.visibleAt * 100).toFixed(0)}%</span>
+                      <button onClick={() => removeHotspot(h.id)} className="text-white/10 hover:text-red-500"><i className="fa-solid fa-trash-can text-[10px]"></i></button>
+                    </div>
+                    <input className="bg-transparent text-[10px] font-bold text-white w-full outline-none mb-1 uppercase" value={h.label} />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {activeTab === 'typography' && (
             <div className="space-y-6">
               <label className="control-label text-purple-500">Typography Lab</label>
@@ -143,7 +192,7 @@ export const Sidebar: React.FC = () => {
                   <i className="fa-solid fa-plus"></i> Import Typeface
                 </button>
               ) : (
-                <div className="p-5 bg-white/5 border border-white/10 rounded-3xl space-y-4 animate-in slide-in-from-top-2">
+                <div className="p-5 bg-white/5 border border-white/10 rounded-3xl space-y-4">
                   <input placeholder="FONT NAME" className="bg-black/40 border border-white/10 p-3 rounded-xl text-[10px] w-full text-white outline-none" value={fontForm.name} onChange={e => setFontForm({...fontForm, name: e.target.value})} />
                   <input placeholder="CDN STYLESHEET URL" className="bg-black/40 border border-white/10 p-3 rounded-xl text-[10px] w-full text-white outline-none" value={fontForm.url} onChange={e => setFontForm({...fontForm, url: e.target.value})} />
                   <div className="flex gap-2">
@@ -193,7 +242,10 @@ export const Sidebar: React.FC = () => {
               <div className="space-y-3">
                 {chapters.map((c) => (
                   <div key={c.id} className={`rounded-2xl p-4 border transition-all cursor-pointer group ${activeChapterId === c.id ? 'bg-white/10 border-white/20' : 'bg-white/5 border-transparent'}`} onClick={() => setActiveChapter(c.id)}>
-                    <input value={c.name} onChange={(e) => updateChapter(c.id, { name: e.target.value })} className="bg-transparent border-0 text-[11px] font-bold text-white w-full outline-none" />
+                    <div className="flex justify-between items-center">
+                      <input value={c.name} onChange={(e) => updateChapter(c.id, { name: e.target.value })} className="bg-transparent border-0 text-[11px] font-bold text-white w-full outline-none" />
+                      <button onClick={(e) => { e.stopPropagation(); removeChapter(c.id); }} className="text-white/10 hover:text-red-500 opacity-0 group-hover:opacity-100"><i className="fa-solid fa-trash-can"></i></button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -211,7 +263,7 @@ export const Sidebar: React.FC = () => {
                   <div key={beat.id} className="p-4 bg-white/5 border border-white/10 rounded-2xl space-y-4 group">
                     <div className="flex justify-between items-center">
                       <span className="text-[9px] font-black text-emerald-400">{(beat.progress * 100).toFixed(0)}% Progress</span>
-                      <button onClick={() => removeSection(beat.id)} className="text-white/20 hover:text-red-500 transition-all"><i className="fa-solid fa-trash-can"></i></button>
+                      <button onClick={() => removeSection(beat.id)} className="text-white/20 hover:text-red-500 transition-all"><i className="fa-solid fa-trash-can text-[10px]"></i></button>
                     </div>
                     <input className="bg-transparent text-[11px] font-bold text-white w-full outline-none" value={beat.title} onChange={e => updateSection(beat.id, { title: e.target.value })} />
                     <textarea className="bg-transparent text-[10px] text-white/40 w-full outline-none h-16 resize-none no-scrollbar" value={beat.description} onChange={e => updateSection(beat.id, { description: e.target.value })} />
@@ -253,6 +305,10 @@ export const Sidebar: React.FC = () => {
                   <div className="space-y-2">
                     <div className="flex justify-between text-[9px] uppercase font-black text-white/30">Roughness <span>{activeMaterial?.roughness.toFixed(2)}</span></div>
                     <input type="range" min="0" max="1" step="0.01" value={activeMaterial?.roughness} onChange={e => updateMaterial(selectedMeshName!, { roughness: parseFloat(e.target.value) })} className="w-full h-1 bg-white/10 appearance-none accent-white rounded-full" />
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-[9px] uppercase font-black text-white/30">Metalness <span>{activeMaterial?.metalness.toFixed(2)}</span></div>
+                    <input type="range" min="0" max="1" step="0.01" value={activeMaterial?.metalness} onChange={e => updateMaterial(selectedMeshName!, { metalness: parseFloat(e.target.value) })} className="w-full h-1 bg-white/10 appearance-none accent-white rounded-full" />
                   </div>
                 </div>
               )}

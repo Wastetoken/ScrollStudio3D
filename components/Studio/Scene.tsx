@@ -1,4 +1,3 @@
-
 import React, { useRef, useMemo, Suspense, startTransition, useLayoutEffect, useEffect } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { 
@@ -11,7 +10,7 @@ import {
 import { EffectComposer, Bloom, Vignette, Outline, ChromaticAberration } from '@react-three/postprocessing';
 import * as THREE from 'three';
 import { useStore } from '../../useStore';
-import { useGSAPTimeline } from '../../hooks/useGSAPTimeline';
+import { useGSAPTimeline } from '../../useGSAPTimeline';
 import { Hotspot } from '../../types';
 
 // R3F Intrinsic Elements workaround for TypeScript
@@ -105,7 +104,6 @@ const ModelPrimitive: React.FC<{ url: string; modelRef: React.RefObject<THREE.Gr
   if (!scene) return null;
 
   return (
-    /* Use Group and Primitive constants to satisfy TypeScript */
     <Group ref={modelRef} scale={scale} position={position} rotation={rotation}>
       <Primitive object={scene} onPointerDown={(e: any) => {
           e.stopPropagation();
@@ -167,7 +165,6 @@ export const Scene: React.FC = () => {
         />
       )}
 
-      {/* Use R3F constants for scene elements */}
       <Color attach="background" args={[config.backgroundColor]} />
       <FogExp2 attach="fog" args={[config.fogColor, config.fogDensity ?? 0.08]} />
       <AmbientLight intensity={config.ambientIntensity ?? 0.4} />

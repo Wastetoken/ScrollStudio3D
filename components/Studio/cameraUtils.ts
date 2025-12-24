@@ -24,9 +24,10 @@ export const interpolateCameraState = (
 
   if (keyframes.length === 1 || !posCurve || !targetCurve) {
     const kf = keyframes[0];
-    result.position.set(...kf.position);
-    result.target.set(...kf.target);
-    result.quaternion.set(...kf.quaternion);
+    // Fix: Use fromArray instead of spread to satisfy TypeScript's tuple checking
+    result.position.fromArray(kf.position);
+    result.target.fromArray(kf.target);
+    result.quaternion.fromArray(kf.quaternion);
     result.fov = kf.fov;
     return result;
   }
@@ -47,8 +48,9 @@ export const interpolateCameraState = (
   const alpha = THREE.MathUtils.clamp(segmentProgress, 0, 1);
 
   // Consistent high-precision slerp
-  const qA = new THREE.Quaternion(...kfA.quaternion);
-  const qB = new THREE.Quaternion(...kfB.quaternion);
+  // Fix: Use fromArray for Quaternion instantiation to avoid spread parameter issues
+  const qA = new THREE.Quaternion().fromArray(kfA.quaternion);
+  const qB = new THREE.Quaternion().fromArray(kfB.quaternion);
   result.quaternion.slerpQuaternions(qA, qB, alpha);
   
   result.fov = THREE.MathUtils.lerp(kfA.fov, kfB.fov, alpha);
@@ -59,8 +61,9 @@ export const interpolateCameraState = (
 export const createCurvesFromKeyframes = (keyframes: Keyframe[], splineAlpha: number) => {
   if (keyframes.length < 2) return { posCurve: null, targetCurve: null };
 
-  const points = keyframes.map(k => new THREE.Vector3(...k.position));
-  const targets = keyframes.map(k => new THREE.Vector3(...k.target));
+  // Fix: Use fromArray for Vector3 instantiation to avoid spread parameter issues
+  const points = keyframes.map(k => new THREE.Vector3().fromArray(k.position));
+  const targets = keyframes.map(k => new THREE.Vector3().fromArray(k.target));
   
   const posCurve = new THREE.CatmullRomCurve3(points);
   const targetCurve = new THREE.CatmullRomCurve3(targets);

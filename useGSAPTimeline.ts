@@ -1,9 +1,9 @@
 import React, { useEffect, useRef, startTransition } from 'react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { useStore } from '../useStore';
+import { useStore } from './useStore';
 import * as THREE from 'three';
-import { createCurvesFromKeyframes, interpolateCameraState } from '../cameraUtils';
+import { createCurvesFromKeyframes, interpolateCameraState } from './components/Studio/cameraUtils';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -55,7 +55,6 @@ export const useGSAPTimeline = (
           if (typeof camera.updateProjectionMatrix === 'function') {
             camera.updateProjectionMatrix();
           }
-          // FORCE STABILITY: Ensure matrix is updated immediately to prevent frame-lag flips
           camera.updateMatrixWorld(true);
         }
       }, 0);

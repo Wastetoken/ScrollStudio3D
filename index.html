@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Scrollytelling Engine</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+            background-color: #050505;
+            color: #ffffff;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        canvas {
+            display: block;
+        }
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        .glass-panel {
+            background: rgba(10, 10, 10, 0.7);
+            backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+        }
+        html.preview-mode {
+            overflow-y: auto !important;
+            height: auto !important;
+        }
+        body.preview-mode {
+            overflow-y: auto !important;
+            height: auto !important;
+            min-height: 1000vh !important;
+        }
+        html.edit-mode, body.edit-mode {
+            overflow: hidden !important;
+            height: 100vh !important;
+            position: fixed !important;
+            width: 100% !important;
+        }
+        body.placing-hotspot canvas {
+            cursor: crosshair !important;
+        }
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #000;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #333;
+            border-radius: 10px;
+        }
+        .ui-glow {
+            box-shadow: 0 0 20px rgba(16, 185, 129, 0.2);
+        }
+        .control-label {
+            font-size: 9px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            color: rgba(255, 255, 255, 0.4);
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+    </style>
+    <script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@18.3.1",
+    "react-dom": "https://esm.sh/react-dom@18.3.1",
+    "react-dom/client": "https://esm.sh/react-dom@18.3.1/client",
+    "react/jsx-runtime": "https://esm.sh/react@18.3.1/jsx-runtime",
+    "three": "https://esm.sh/three@0.170.0",
+    "zustand": "https://esm.sh/zustand@5.0.1?deps=react@18.3.1,react-dom@18.3.1",
+    "@react-three/fiber": "https://esm.sh/@react-three/fiber@8.17.10?deps=react@18.3.1,react-dom@18.3.1,three@0.170.0",
+    "@react-three/drei": "https://esm.sh/@react-three/drei@9.114.0?deps=react@18.3.1,react-dom@18.3.1,three@0.170.0,@react-three/fiber@8.17.10",
+    "@react-three/postprocessing": "https://esm.sh/@react-three/postprocessing@2.16.3?deps=react@18.3.1,react-dom@18.3.1,three@0.170.0,@react-three/fiber@8.17.10",
+    "gsap": "https://esm.sh/gsap@3.12.5",
+    "gsap/ScrollTrigger": "https://esm.sh/gsap@3.12.5/ScrollTrigger",
+    "jszip": "https://esm.sh/jszip@3.10.1",
+    "@google/genai": "https://esm.sh/@google/genai@1.3.0"
+  }
+}
+</script>
+</head>
+<body class="edit-mode">
+    <div id="root"></div>
+    <script type="module" src="./index.tsx"></script>
+</body>
+</html>
