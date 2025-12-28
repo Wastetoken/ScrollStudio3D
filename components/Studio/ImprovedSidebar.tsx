@@ -150,9 +150,10 @@ export const ImprovedSidebar: React.FC = () => {
             <div className="space-y-6">
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-bold text-white/90 uppercase tracking-wider">Scene Chapters</h3>
-                <label className="cursor-pointer px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-xs font-bold uppercase tracking-wider rounded-xl hover:shadow-lg hover:shadow-emerald-500/20 transition-all">
+                <label htmlFor="add-scene-input" className="cursor-pointer px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-xs font-bold uppercase tracking-wider rounded-xl hover:shadow-lg hover:shadow-emerald-500/20 transition-all">
                   <i className="fa-solid fa-plus mr-2"></i>Add Scene
                   <input 
+                    id="add-scene-input"
                     ref={fileInputRef}
                     type="file" 
                     accept=".glb,.gltf" 

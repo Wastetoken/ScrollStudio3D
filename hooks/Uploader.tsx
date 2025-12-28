@@ -145,6 +145,7 @@ export const Uploader: React.FC = () => {
               <i className="fa-solid fa-file-import text-xs"></i>
               Restore
               <input 
+                id="restore-project-input"
                 ref={projectInputRef}
                 type="file" 
                 accept=".json" 
