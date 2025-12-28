@@ -12,7 +12,8 @@ export const Sidebar: React.FC = () => {
     selectedMeshName, setSelectedMesh, updateMaterial, setConfig,
     typography, addFont, removeFont, setIsExporting,
     projectName, author, projectDescription, setProjectInfo,
-    isPlacingHotspot, setIsPlacingHotspot, removeHotspot
+    isPlacingHotspot, setIsPlacingHotspot, removeHotspot,
+    setLandingMode
   } = useStore();
   
   const [activeTab, setActiveTab] = useState<'chapters' | 'path' | 'story' | 'material' | 'hotspots' | 'typography' | 'fx' | 'settings'>('chapters');
@@ -86,6 +87,13 @@ export const Sidebar: React.FC = () => {
         <button onClick={() => setMode('edit')} className={`flex-1 py-3 rounded-full text-[10px] font-black uppercase tracking-[0.2em] transition-all ${mode === 'edit' ? 'bg-white text-black shadow-xl' : 'text-white/40 hover:text-white'}`}>Studio</button>
         <button onClick={() => setMode('preview')} className={`flex-1 py-3 rounded-full text-[10px] font-black uppercase tracking-[0.2em] transition-all ${mode === 'preview' ? 'bg-white text-black shadow-xl' : 'text-white/40 hover:text-white'}`}>Preview</button>
       </div>
+      
+      <button 
+        onClick={() => setLandingMode(true)} 
+        className="glass-panel px-6 py-3 rounded-full pointer-events-auto shadow-2xl mb-4 border-white/5 text-white/60 hover:text-white hover:bg-white/10 transition-all shrink-0 text-[10px] font-black uppercase tracking-[0.2em]"
+      >
+        <i className="fa-solid fa-home mr-2"></i> Home
+      </button>
 
       <div className="glass-panel rounded-[2.5rem] flex-1 pointer-events-auto shadow-2xl flex flex-col min-h-0 border-white/10 overflow-hidden">
         <div className="grid grid-cols-4 gap-0.5 p-2 bg-black/40 border-b border-white/5 shrink-0">
