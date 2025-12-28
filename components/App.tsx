@@ -2,12 +2,14 @@ import React, { useEffect, useMemo, Suspense, useRef } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { useStore } from '../useStore';
 import { Scene } from './Studio/Scene';
-import { Sidebar } from './Studio/Sidebar';
-import { Timeline } from './Studio/Timeline';
+import { ImprovedSidebar } from './Studio/ImprovedSidebar';
+import { ImprovedTimeline } from './Studio/ImprovedTimeline';
 import { Handbook } from './Studio/Handbook';
 import { Uploader } from '../hooks/Uploader';
 import { KeyframeCapturer } from './Studio/KeyframeCapturer';
 import { ExportOverlay } from './Studio/ExportOverlay';
+import { LandingPage } from './Landing/LandingPage';
+
 import { useFontLoader } from '../hooks/useFontLoader';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
@@ -16,7 +18,7 @@ import { StorySection } from '../types';
 gsap.registerPlugin(ScrollTrigger);
 
 const App: React.FC = () => {
-  const { mode, currentProgress, chapters, activeChapterId, setMode, isPlacingHotspot, setActiveChapter, setTransitionState, setSelectedMesh, typography, cinematicBars } = useStore();
+  const { mode, currentProgress, chapters, activeChapterId, setMode, isPlacingHotspot, setActiveChapter, setTransitionState, setSelectedMesh, typography, cinematicBars, landingMode } = useStore();
   const transitionTimeline = useRef<gsap.core.Timeline | null>(null);
 
   useFontLoader(typography.fonts);
@@ -89,6 +91,11 @@ const App: React.FC = () => {
     );
   };
 
+  // Show landing page if in landing mode
+  if (landingMode) {
+    return <LandingPage />;
+  }
+
   return (
     <div className={`w-full relative bg-[#050505] ${mode === 'preview' ? 'min-h-[1000vh]' : 'h-screen overflow-hidden'}`}>
       <div className="fixed inset-0 z-0">
@@ -111,8 +118,8 @@ const App: React.FC = () => {
       
       {mode === 'edit' && chapters && chapters.length > 0 && (
         <>
-          <Sidebar />
-          <Timeline />
+          <ImprovedSidebar />
+          <ImprovedTimeline />
         </>
       )}
 
@@ -122,7 +129,7 @@ const App: React.FC = () => {
             {currentChapter?.narrativeBeats?.map(renderSection)}
           </div>
           <div className="fixed top-12 left-12 z-[200] pointer-events-auto">
-             <button onClick={() => setMode('edit')} className="bg-white text-black px-10 py-4 rounded-full text-[10px] font-black uppercase tracking-widest shadow-2xl">
+             <button onClick={() => setMode('edit')} className="bg-white text-black px-10 py-4 rounded-full text-[10px] font-black uppercase tracking-widest shadow-2xl hover:bg-gray-100 transition-colors">
                <i className="fa-solid fa-arrow-left mr-3"></i> Studio Mode
              </button>
           </div>

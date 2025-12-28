@@ -60,6 +60,8 @@ export const useStore = create<StoreState & {
   setNarrativeBeats: (beats: StorySection[]) => void;
   isExporting: boolean;
   setIsExporting: (isExporting: boolean) => void;
+  landingMode: boolean;
+  setLandingMode: (mode: boolean) => void;
 }>((set) => ({
   mode: 'edit',
   viewMode: 'cinema',
@@ -74,6 +76,7 @@ export const useStore = create<StoreState & {
   selectedMeshName: null,
   cinematicBars: false,
   isExporting: false,
+  landingMode: true,
   
   projectName: 'UNTITLED_CHRONICLE',
   author: 'DESIGN_OPERATOR_01',
@@ -85,6 +88,7 @@ export const useStore = create<StoreState & {
   lastAudit: null,
 
   setIsExporting: (isExporting) => set({ isExporting }),
+  setLandingMode: (landingMode) => set({ landingMode }),
   setPerformanceTier: (tier) => set({ performanceTier: tier }),
   setTransitionState: (isTransitioning, progress) => set({ isTransitioning, transitionProgress: progress }),
   setProjectInfo: (info) => set((state) => ({ ...state, ...info })),
