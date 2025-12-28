@@ -76,7 +76,7 @@ export const useStore = create<StoreState & {
   selectedMeshName: null,
   cinematicBars: false,
   isExporting: false,
-  landingMode: false,
+  landingMode: true,
   
   projectName: 'UNTITLED_CHRONICLE',
   author: 'DESIGN_OPERATOR_01',

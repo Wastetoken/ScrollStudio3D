@@ -8,6 +8,7 @@ import { Handbook } from './Studio/Handbook';
 import { Uploader } from '../hooks/Uploader';
 import { KeyframeCapturer } from './Studio/KeyframeCapturer';
 import { ExportOverlay } from './Studio/ExportOverlay';
+import { LandingPage } from './Landing/LandingPage';
 
 import { useFontLoader } from '../hooks/useFontLoader';
 import gsap from 'gsap';
@@ -17,7 +18,7 @@ import { StorySection } from '../types';
 gsap.registerPlugin(ScrollTrigger);
 
 const App: React.FC = () => {
-  const { mode, currentProgress, chapters, activeChapterId, setMode, isPlacingHotspot, setActiveChapter, setTransitionState, setSelectedMesh, typography, cinematicBars } = useStore();
+  const { mode, currentProgress, chapters, activeChapterId, setMode, isPlacingHotspot, setActiveChapter, setTransitionState, setSelectedMesh, typography, cinematicBars, landingMode } = useStore();
   const transitionTimeline = useRef<gsap.core.Timeline | null>(null);
 
   useFontLoader(typography.fonts);
@@ -89,6 +90,11 @@ const App: React.FC = () => {
       </div>
     );
   };
+
+  // Show landing page if in landing mode
+  if (landingMode) {
+    return <LandingPage />;
+  }
 
   return (
     <div className={`w-full relative bg-[#050505] ${mode === 'preview' ? 'min-h-[1000vh]' : 'h-screen overflow-hidden'}`}>

@@ -12,7 +12,8 @@ export const ImprovedSidebar: React.FC = () => {
     selectedMeshName, setSelectedMesh, updateMaterial, setConfig,
     addFont, removeFont, setIsExporting,
     projectName, setProjectInfo,
-    setIsPlacingHotspot, removeHotspot
+    setIsPlacingHotspot, removeHotspot,
+    setLandingMode
   } = useStore();
   
   const [activeTab, setActiveTab] = useState<'chapters' | 'camera' | 'story' | 'materials' | 'effects'>('chapters');
@@ -97,10 +98,16 @@ export const ImprovedSidebar: React.FC = () => {
         {/* Quick Actions */}
         <div className="flex gap-2">
           <button 
-            onClick={() => setIsExporting(true)} 
-            className="glass-panel px-4 py-3 rounded-xl shadow-xl border border-white/10 text-white/70 hover:text-white hover:bg-white/5 hover:border-white/20 transition-all text-xs font-bold uppercase tracking-wider w-full"
+            onClick={() => setLandingMode(true)} 
+            className="glass-panel px-4 py-3 rounded-xl shadow-xl border border-white/10 text-white/70 hover:text-white hover:bg-white/5 hover:border-white/20 transition-all text-xs font-bold uppercase tracking-wider flex-1"
           >
-            <i className="fa-solid fa-download mr-2"></i>Export Project
+            <i className="fa-solid fa-home mr-2"></i>Home
+          </button>
+          <button 
+            onClick={() => setIsExporting(true)} 
+            className="glass-panel px-4 py-3 rounded-xl shadow-xl border border-white/10 text-white/70 hover:text-white hover:bg-white/5 hover:border-white/20 transition-all text-xs font-bold uppercase tracking-wider flex-1"
+          >
+            <i className="fa-solid fa-download mr-2"></i>Export
           </button>
         </div>
       </div>
