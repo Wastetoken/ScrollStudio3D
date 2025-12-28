@@ -1,4 +1,5 @@
 import React from 'react';
+import { FeatureScene3D } from './FeatureScene3D';
 
 interface FeatureCardProps {
   icon: React.ReactNode;
@@ -102,6 +103,11 @@ export const Features: React.FC = () => {
           <p className="text-xl text-slate-400 max-w-2xl mx-auto">
             Powerful tools designed for creators, storytellers, and designers.
           </p>
+        </div>
+
+        {/* 3D Showcase */}
+        <div className="mb-16">
+          <FeatureScene3D />
         </div>
 
         {/* Feature Cards Grid */}

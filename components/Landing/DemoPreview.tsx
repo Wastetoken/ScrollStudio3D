@@ -1,5 +1,43 @@
-import React from 'react';
+import React, { Suspense, useRef } from 'react';
+import { Canvas, useFrame } from '@react-three/fiber';
+import { useGLTF, PerspectiveCamera, Environment } from '@react-three/drei';
+import * as THREE from 'three';
 import { useStore } from '../../useStore';
+
+const InteractiveModel: React.FC<{ url: string }> = ({ url }) => {
+  const groupRef = useRef<THREE.Group>(null);
+  const { scene } = useGLTF(url);
+  const clonedScene = React.useMemo(() => scene.clone(), [scene]);
+
+  useFrame((state) => {
+    if (!groupRef.current) return;
+    groupRef.current.rotation.y = Math.sin(state.clock.getElapsedTime() * 0.3) * 0.3;
+    groupRef.current.position.y = Math.sin(state.clock.getElapsedTime() * 0.5) * 0.15;
+  });
+
+  return (
+    <group ref={groupRef} scale={1.8}>
+      <primitive object={clonedScene} />
+    </group>
+  );
+};
+
+const DemoScene: React.FC = () => {
+  const modelUrl = 'https://pub-a56d70d158b1414d83c3856ea210601c.r2.dev/Scrollytelling%202.glb';
+  
+  return (
+    <>
+      <PerspectiveCamera makeDefault position={[0, 0, 5]} fov={50} />
+      <ambientLight intensity={0.5} />
+      <directionalLight position={[10, 10, 5]} intensity={1.5} />
+      <pointLight position={[-10, -10, -5]} intensity={0.5} color="#6366f1" />
+      <Suspense fallback={null}>
+        <InteractiveModel url={modelUrl} />
+        <Environment preset="studio" />
+      </Suspense>
+    </>
+  );
+};
 
 export const DemoPreview: React.FC = () => {
   const { setLandingMode } = useStore();
@@ -52,38 +90,43 @@ export const DemoPreview: React.FC = () => {
               </p>
             </div>
 
-            {/* Preview Area */}
+            {/* Preview Area with 3D Scene */}
             <div className="relative mb-8 overflow-hidden rounded-2xl border border-slate-700 bg-slate-950">
-              <div className="aspect-video w-full bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex flex-col items-center justify-center p-8">
-                {/* Animated rings */}
-                <div className="relative mb-6">
-                  <div className="absolute inset-0 rounded-full bg-indigo-500 opacity-20 blur-2xl animate-pulse" />
-                  <div className="relative w-24 h-24 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-2xl">
-                    <svg className="w-12 h-12 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122" />
-                    </svg>
-                  </div>
-                </div>
+              <div className="aspect-video w-full relative">
+                {/* 3D Canvas */}
+                <Canvas
+                  dpr={[1, 2]}
+                  gl={{ 
+                    antialias: true, 
+                    alpha: false,
+                    powerPreference: 'high-performance'
+                  }}
+                >
+                  <DemoScene />
+                </Canvas>
                 
-                <h3 className="text-2xl font-bold text-white mb-2">Interactive Studio</h3>
-                <p className="text-slate-400 text-center mb-6 max-w-md">
-                  Full-featured 3D editor with timeline controls, camera paths, and real-time preview
-                </p>
+                {/* Overlay Content */}
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-transparent to-transparent flex flex-col items-center justify-end p-8 pointer-events-none">
+                  <h3 className="text-2xl font-bold text-white mb-2">Interactive Studio</h3>
+                  <p className="text-slate-300 text-center mb-4 max-w-md text-sm">
+                    Full-featured 3D editor with timeline controls, camera paths, and real-time preview
+                  </p>
 
-                {/* Use Cases */}
-                <div className="flex flex-wrap gap-2 justify-center">
-                  <span className="px-3 py-1 rounded-full bg-slate-800 border border-slate-700 text-slate-300 text-sm">
-                    Product Reveals
-                  </span>
-                  <span className="px-3 py-1 rounded-full bg-slate-800 border border-slate-700 text-slate-300 text-sm">
-                    Story Presentations
-                  </span>
-                  <span className="px-3 py-1 rounded-full bg-slate-800 border border-slate-700 text-slate-300 text-sm">
-                    Portfolios
-                  </span>
-                  <span className="px-3 py-1 rounded-full bg-slate-800 border border-slate-700 text-slate-300 text-sm">
-                    Education
-                  </span>
+                  {/* Use Cases */}
+                  <div className="flex flex-wrap gap-2 justify-center">
+                    <span className="px-3 py-1 rounded-full bg-slate-800/80 backdrop-blur-sm border border-slate-700 text-slate-300 text-xs">
+                      Product Reveals
+                    </span>
+                    <span className="px-3 py-1 rounded-full bg-slate-800/80 backdrop-blur-sm border border-slate-700 text-slate-300 text-xs">
+                      Story Presentations
+                    </span>
+                    <span className="px-3 py-1 rounded-full bg-slate-800/80 backdrop-blur-sm border border-slate-700 text-slate-300 text-xs">
+                      Portfolios
+                    </span>
+                    <span className="px-3 py-1 rounded-full bg-slate-800/80 backdrop-blur-sm border border-slate-700 text-slate-300 text-xs">
+                      Education
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>

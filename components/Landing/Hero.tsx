@@ -1,5 +1,6 @@
 import React from 'react';
 import { useStore } from '../../useStore';
+import { Scene3D } from './Scene3D';
 
 export const Hero: React.FC = () => {
   const { setLandingMode } = useStore();
@@ -14,6 +15,8 @@ export const Hero: React.FC = () => {
 
   return (
     <div className="relative min-h-screen flex items-center justify-center px-6 py-12 md:px-10 lg:px-12">
+      {/* 3D Scene Background */}
+      <Scene3D />
       <div className="max-w-7xl mx-auto w-full">
         {/* Animated Title */}
         <h1 className="text-5xl font-bold tracking-tight md:text-6xl lg:text-7xl text-center mb-6 text-white">
