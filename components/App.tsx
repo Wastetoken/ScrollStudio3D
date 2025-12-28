@@ -2,8 +2,8 @@ import React, { useEffect, useMemo, Suspense, useRef } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { useStore } from '../useStore';
 import { Scene } from './Studio/Scene';
-import { Sidebar } from './Studio/Sidebar';
-import { Timeline } from './Studio/Timeline';
+import { ImprovedSidebar } from './Studio/ImprovedSidebar';
+import { ImprovedTimeline } from './Studio/ImprovedTimeline';
 import { Handbook } from './Studio/Handbook';
 import { Uploader } from '../hooks/Uploader';
 import { KeyframeCapturer } from './Studio/KeyframeCapturer';
@@ -117,8 +117,8 @@ const App: React.FC = () => {
       
       {mode === 'edit' && chapters && chapters.length > 0 && (
         <>
-          <Sidebar />
-          <Timeline />
+          <ImprovedSidebar />
+          <ImprovedTimeline />
         </>
       )}
 
