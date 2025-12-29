@@ -5,19 +5,21 @@ import { StorySection } from '../../types';
 export const ImprovedSidebar: React.FC = () => {
   const { 
     chapters, activeChapterId, setActiveChapter,
-    mode, setMode, currentProgress,
+    mode, setMode, currentProgress, setCurrentProgress,
     addChapter, removeChapter, updateChapter, duplicateChapter,
     addSection, removeSection, updateSection,
     removeKeyframe,
     selectedMeshName, setSelectedMesh, updateMaterial, setConfig,
-    addFont, removeFont, setIsExporting,
-    projectName, setProjectInfo,
-    setIsPlacingHotspot, removeHotspot,
+    addFont, removeFont, setIsExporting, typography,
+    projectName, author, projectDescription, setProjectInfo,
+    isPlacingHotspot, setIsPlacingHotspot, removeHotspot,
     setLandingMode
   } = useStore();
   
-  const [activeTab, setActiveTab] = useState<'chapters' | 'camera' | 'story' | 'materials' | 'effects'>('chapters');
+  const [activeTab, setActiveTab] = useState<'chapters' | 'camera' | 'story' | 'materials' | 'effects' | 'typography' | 'hotspots' | 'settings'>('chapters');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [showFontForm, setShowFontForm] = useState(false);
+  const [fontForm, setFontForm] = useState({ name: '', url: '' });
 
   useEffect(() => {
     if (selectedMeshName) setActiveTab('materials');
@@ -67,17 +69,29 @@ export const ImprovedSidebar: React.FC = () => {
     addSection(newBeat);
   };
 
+  const handleAddFont = () => {
+    if (!fontForm.name || !fontForm.url) return;
+    addFont({
+      id: Math.random().toString(36).substr(2, 9),
+      name: fontForm.name,
+      source: 'cdn',
+      url: fontForm.url.trim()
+    });
+    setFontForm({ name: '', url: '' });
+    setShowFontForm(false);
+  };
+
   return (
-    <div className="fixed left-6 top-6 bottom-40 w-96 z-[200] flex flex-col pointer-events-none gap-4">
+    <div className="fixed left-6 top-6 bottom-40 w-[28rem] z-[200] flex flex-col pointer-events-none gap-4">
       {/* Header Controls */}
       <div className="pointer-events-auto space-y-3">
         {/* Mode Switcher */}
-        <div className="glass-panel p-1.5 rounded-2xl flex shadow-2xl border border-white/10">
+        <div className="glass-panel p-1.5 rounded-2xl flex shadow-2xl border-2 border-white/10">
           <button 
             onClick={() => setMode('edit')} 
             className={`flex-1 py-3 px-4 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${
               mode === 'edit' 
-                ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg shadow-emerald-500/20' 
+                ? 'bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 text-white shadow-lg shadow-emerald-500/30' 
                 : 'text-white/50 hover:text-white/80 hover:bg-white/5'
             }`}
           >
@@ -87,7 +101,7 @@ export const ImprovedSidebar: React.FC = () => {
             onClick={() => setMode('preview')} 
             className={`flex-1 py-3 px-4 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${
               mode === 'preview' 
-                ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg shadow-purple-500/20' 
+                ? 'bg-gradient-to-r from-purple-500 via-pink-500 to-purple-600 text-white shadow-lg shadow-purple-500/30' 
                 : 'text-white/50 hover:text-white/80 hover:bg-white/5'
             }`}
           >
@@ -99,13 +113,13 @@ export const ImprovedSidebar: React.FC = () => {
         <div className="flex gap-2">
           <button 
             onClick={() => setLandingMode(true)} 
-            className="glass-panel px-4 py-3 rounded-xl shadow-xl border border-white/10 text-white/70 hover:text-white hover:bg-white/5 hover:border-white/20 transition-all text-xs font-bold uppercase tracking-wider flex-1"
+            className="glass-panel px-4 py-3 rounded-xl shadow-xl border-2 border-white/10 text-white/70 hover:text-white hover:bg-white/5 hover:border-emerald-500/30 hover:shadow-emerald-500/20 transition-all text-xs font-bold uppercase tracking-wider flex-1"
           >
             <i className="fa-solid fa-home mr-2"></i>Home
           </button>
           <button 
             onClick={() => setIsExporting(true)} 
-            className="glass-panel px-4 py-3 rounded-xl shadow-xl border border-white/10 text-white/70 hover:text-white hover:bg-white/5 hover:border-white/20 transition-all text-xs font-bold uppercase tracking-wider flex-1"
+            className="glass-panel px-4 py-3 rounded-xl shadow-xl border-2 border-white/10 text-white/70 hover:text-white hover:bg-white/5 hover:border-indigo-500/30 hover:shadow-indigo-500/20 transition-all text-xs font-bold uppercase tracking-wider flex-1"
           >
             <i className="fa-solid fa-download mr-2"></i>Export
           </button>
@@ -113,34 +127,46 @@ export const ImprovedSidebar: React.FC = () => {
       </div>
 
       {/* Main Panel */}
-      <div className="glass-panel rounded-3xl flex-1 pointer-events-auto shadow-2xl flex flex-col min-h-0 border border-white/10 overflow-hidden">
-        {/* Tab Navigation */}
-        <div className="flex border-b border-white/10 bg-black/20 shrink-0">
+      <div className="glass-panel rounded-3xl flex-1 pointer-events-auto shadow-2xl flex flex-col min-h-0 border-2 border-white/10 overflow-hidden">
+        {/* Tab Navigation - Now with 8 tabs in 2 rows */}
+        <div className="grid grid-cols-4 gap-0.5 p-1.5 bg-black/30 shrink-0">
           {[
-            { id: 'chapters', icon: 'fa-layer-group', label: 'Scenes' },
-            { id: 'camera', icon: 'fa-video', label: 'Camera' },
-            { id: 'story', icon: 'fa-book-open', label: 'Story' },
-            { id: 'materials', icon: 'fa-droplet', label: 'Materials' },
-            { id: 'effects', icon: 'fa-sparkles', label: 'FX' },
-          ].map((tab) => (
-            <button 
-              key={tab.id} 
-              onClick={() => setActiveTab(tab.id as any)} 
-              className={`flex-1 py-4 px-3 transition-all relative group ${
-                activeTab === tab.id 
-                  ? 'text-emerald-400' 
-                  : 'text-white/30 hover:text-white/60 hover:bg-white/5'
-              }`}
-            >
-              <div className="flex flex-col items-center gap-1">
-                <i className={`fa-solid ${tab.icon} text-sm`}></i>
-                <span className="text-[9px] font-bold uppercase tracking-wider">{tab.label}</span>
-              </div>
-              {activeTab === tab.id && (
-                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-emerald-400 to-transparent"></div>
-              )}
-            </button>
-          ))}
+            { id: 'chapters', icon: 'fa-layer-group', label: 'Scenes', color: 'emerald' },
+            { id: 'camera', icon: 'fa-video', label: 'Camera', color: 'blue' },
+            { id: 'story', icon: 'fa-book-open', label: 'Story', color: 'purple' },
+            { id: 'materials', icon: 'fa-droplet', label: 'Materials', color: 'pink' },
+            { id: 'effects', icon: 'fa-sparkles', label: 'FX', color: 'orange' },
+            { id: 'typography', icon: 'fa-font', label: 'Fonts', color: 'indigo' },
+            { id: 'hotspots', icon: 'fa-location-dot', label: 'Hotspots', color: 'teal' },
+            { id: 'settings', icon: 'fa-gear', label: 'Settings', color: 'slate' },
+          ].map((tab) => {
+            const colorMap: Record<string, string> = {
+              emerald: 'from-emerald-500 to-teal-600 shadow-emerald-500/30',
+              blue: 'from-blue-500 to-cyan-600 shadow-blue-500/30',
+              purple: 'from-purple-500 to-pink-600 shadow-purple-500/30',
+              pink: 'from-pink-500 to-rose-600 shadow-pink-500/30',
+              orange: 'from-orange-500 to-amber-600 shadow-orange-500/30',
+              indigo: 'from-indigo-500 to-purple-600 shadow-indigo-500/30',
+              teal: 'from-teal-500 to-emerald-600 shadow-teal-500/30',
+              slate: 'from-slate-500 to-gray-600 shadow-slate-500/30',
+            };
+            return (
+              <button 
+                key={tab.id} 
+                onClick={() => setActiveTab(tab.id as any)} 
+                className={`py-3 px-2 rounded-xl transition-all relative group ${
+                  activeTab === tab.id 
+                    ? `bg-gradient-to-br ${colorMap[tab.color]} text-white shadow-lg` 
+                    : 'text-white/30 hover:text-white/60 hover:bg-white/5'
+                }`}
+              >
+                <div className="flex flex-col items-center gap-1">
+                  <i className={`fa-solid ${tab.icon} text-sm`}></i>
+                  <span className="text-[8px] font-bold uppercase tracking-wider">{tab.label}</span>
+                </div>
+              </button>
+            );
+          })}
         </div>
 
         {/* Content Area */}
@@ -372,14 +398,14 @@ export const ImprovedSidebar: React.FC = () => {
             </div>
           )}
 
-          {/* EFFECTS TAB */}
+          {/* EFFECTS TAB - Enhanced with all missing controls */}
           {activeTab === 'effects' && (
             <div className="space-y-6">
-              <h3 className="text-sm font-bold text-white/90 uppercase tracking-wider">Post Processing</h3>
+              <h3 className="text-sm font-bold text-white/90 uppercase tracking-wider">Post Processing & Effects</h3>
               
-              <div className="space-y-5">
+              <div className="space-y-4">
                 {/* Bloom */}
-                <div className="p-4 bg-white/5 rounded-2xl border border-white/10">
+                <div className="p-4 bg-gradient-to-br from-white/5 to-white/[0.02] rounded-2xl border-2 border-white/10 hover:border-emerald-500/30 transition-all">
                   <div className="flex justify-between text-[10px] font-bold text-white/40 uppercase tracking-wider mb-3">
                     Bloom Intensity <span className="text-emerald-400">{config.bloomIntensity.toFixed(1)}</span>
                   </div>
@@ -394,8 +420,24 @@ export const ImprovedSidebar: React.FC = () => {
                   />
                 </div>
 
+                {/* Chromatic Aberration */}
+                <div className="p-4 bg-gradient-to-br from-white/5 to-white/[0.02] rounded-2xl border-2 border-white/10 hover:border-purple-500/30 transition-all">
+                  <div className="flex justify-between text-[10px] font-bold text-white/40 uppercase tracking-wider mb-3">
+                    Chromatic Aberration <span className="text-purple-400">{config.chromaticAberration.toFixed(4)}</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0"
+                    max="0.05"
+                    step="0.0005"
+                    value={config.chromaticAberration}
+                    onChange={(e) => setConfig({ chromaticAberration: parseFloat(e.target.value) })}
+                    className="w-full h-2 bg-white/10 rounded-full appearance-none accent-purple-500"
+                  />
+                </div>
+
                 {/* Fog */}
-                <div className="p-4 bg-white/5 rounded-2xl border border-white/10">
+                <div className="p-4 bg-gradient-to-br from-white/5 to-white/[0.02] rounded-2xl border-2 border-white/10 hover:border-blue-500/30 transition-all">
                   <div className="flex justify-between text-[10px] font-bold text-white/40 uppercase tracking-wider mb-3">
                     Fog Density <span className="text-blue-400">{config.fogDensity.toFixed(2)}</span>
                   </div>
@@ -413,14 +455,14 @@ export const ImprovedSidebar: React.FC = () => {
                       type="color"
                       value={config.fogColor}
                       onChange={(e) => setConfig({ fogColor: e.target.value })}
-                      className="h-8 w-16 rounded-lg cursor-pointer border border-white/20"
+                      className="h-8 w-16 rounded-lg cursor-pointer border-2 border-white/20"
                     />
                     <span className="text-[10px] font-mono text-white/40">{config.fogColor}</span>
                   </div>
                 </div>
 
                 {/* Exposure */}
-                <div className="p-4 bg-white/5 rounded-2xl border border-white/10">
+                <div className="p-4 bg-gradient-to-br from-white/5 to-white/[0.02] rounded-2xl border-2 border-white/10 hover:border-orange-500/30 transition-all">
                   <div className="flex justify-between text-[10px] font-bold text-white/40 uppercase tracking-wider mb-3">
                     Exposure <span className="text-orange-400">{config.exposure.toFixed(1)}</span>
                   </div>
@@ -434,7 +476,172 @@ export const ImprovedSidebar: React.FC = () => {
                     className="w-full h-2 bg-white/10 rounded-full appearance-none accent-orange-500"
                   />
                 </div>
+
+                {/* Spline Tension */}
+                <div className="p-4 bg-gradient-to-br from-white/5 to-white/[0.02] rounded-2xl border-2 border-white/10 hover:border-indigo-500/30 transition-all">
+                  <div className="flex justify-between text-[10px] font-bold text-white/40 uppercase tracking-wider mb-3">
+                    Camera Path Tension <span className="text-indigo-400">{config.splineAlpha.toFixed(2)}</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.01"
+                    value={config.splineAlpha}
+                    onChange={(e) => setConfig({ splineAlpha: parseFloat(e.target.value) })}
+                    className="w-full h-2 bg-white/10 rounded-full appearance-none accent-indigo-500"
+                  />
+                  <p className="text-[8px] text-white/30 uppercase font-bold italic tracking-wider mt-2">0: Tight • 0.5: Natural • 1: Sweeping</p>
+                </div>
               </div>
+            </div>
+          )}
+
+          {/* TYPOGRAPHY TAB - NEW */}
+          {activeTab === 'typography' && (
+            <div className="space-y-6">
+              <h3 className="text-sm font-bold text-white/90 uppercase tracking-wider">Typography Management</h3>
+              
+              {!showFontForm ? (
+                <button 
+                  onClick={() => setShowFontForm(true)} 
+                  className="w-full py-4 bg-gradient-to-r from-indigo-500 to-purple-600 text-white text-xs font-bold uppercase tracking-wider rounded-2xl flex items-center justify-center gap-2 shadow-lg hover:shadow-2xl hover:shadow-indigo-500/30 transition-all hover:scale-105"
+                >
+                  <i className="fa-solid fa-plus"></i> Import Typeface
+                </button>
+              ) : (
+                <div className="p-5 bg-gradient-to-br from-white/5 to-white/[0.02] border-2 border-white/10 rounded-3xl space-y-4">
+                  <input 
+                    placeholder="FONT NAME" 
+                    className="bg-black/40 border-2 border-white/10 p-3 rounded-xl text-xs w-full text-white outline-none focus:border-indigo-500 transition-colors" 
+                    value={fontForm.name} 
+                    onChange={e => setFontForm({...fontForm, name: e.target.value})} 
+                  />
+                  <input 
+                    placeholder="CDN STYLESHEET URL" 
+                    className="bg-black/40 border-2 border-white/10 p-3 rounded-xl text-xs w-full text-white outline-none focus:border-indigo-500 transition-colors" 
+                    value={fontForm.url} 
+                    onChange={e => setFontForm({...fontForm, url: e.target.value})} 
+                  />
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={handleAddFont} 
+                      className="flex-1 py-3 bg-gradient-to-r from-emerald-500 to-teal-600 text-white text-xs font-bold rounded-xl uppercase tracking-wider hover:scale-105 transition-transform"
+                    >
+                      Save
+                    </button>
+                    <button 
+                      onClick={() => setShowFontForm(false)} 
+                      className="px-4 py-3 bg-white/5 text-white/60 text-xs font-bold rounded-xl uppercase tracking-wider hover:bg-white/10 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-3">
+                {typography.fonts.map(font => (
+                  <div 
+                    key={font.id} 
+                    className="p-4 bg-gradient-to-br from-white/5 to-white/[0.02] border-2 border-white/10 rounded-2xl flex items-center justify-between group hover:border-indigo-500/30 transition-all"
+                  >
+                    <span className="text-xs font-bold text-white uppercase tracking-widest">{font.name}</span>
+                    <button 
+                      onClick={() => removeFont(font.id)} 
+                      className="text-white/20 hover:text-red-500 transition-all hover:scale-110"
+                    >
+                      <i className="fa-solid fa-trash-can text-sm"></i>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* HOTSPOTS TAB - NEW */}
+          {activeTab === 'hotspots' && (
+            <div className="space-y-6">
+              <h3 className="text-sm font-bold text-white/90 uppercase tracking-wider">Spatial Anchors</h3>
+              
+              <button 
+                onClick={() => setIsPlacingHotspot(!isPlacingHotspot)} 
+                className={`w-full py-4 text-xs font-bold uppercase tracking-wider rounded-2xl flex items-center justify-center gap-2 transition-all shadow-lg ${
+                  isPlacingHotspot 
+                    ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-emerald-500/30 animate-pulse' 
+                    : 'bg-gradient-to-r from-white/10 to-white/5 text-white border-2 border-white/10 hover:bg-white/20 hover:border-emerald-500/30 hover:scale-105'
+                }`}
+              >
+                <i className={`fa-solid ${isPlacingHotspot ? 'fa-crosshairs' : 'fa-plus'}`}></i>
+                {isPlacingHotspot ? 'Click 3D Model Surface' : 'Place Anchor'}
+              </button>
+
+              <div className="space-y-3">
+                {activeChapter.spatialAnnotations.map(h => (
+                  <div 
+                    key={h.id} 
+                    className="p-4 bg-gradient-to-br from-white/5 to-white/[0.02] border-2 border-white/10 rounded-2xl group hover:border-teal-500/30 transition-all"
+                  >
+                    <div className="flex justify-between items-center mb-3">
+                      <span className="text-[9px] font-bold text-white/40 uppercase tracking-wider">Anchor @ {(h.visibleAt * 100).toFixed(0)}%</span>
+                      <button 
+                        onClick={() => removeHotspot(h.id)} 
+                        className="text-white/20 hover:text-red-500 transition-all hover:scale-110"
+                      >
+                        <i className="fa-solid fa-trash-can text-sm"></i>
+                      </button>
+                    </div>
+                    <input 
+                      className="bg-black/40 border-2 border-white/10 p-2 rounded-xl text-xs font-bold text-white w-full outline-none focus:border-teal-500 transition-colors uppercase" 
+                      value={h.label}
+                      placeholder="Anchor Label"
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* SETTINGS TAB - NEW */}
+          {activeTab === 'settings' && (
+            <div className="space-y-6">
+              <h3 className="text-sm font-bold text-white/90 uppercase tracking-wider">Project Configuration</h3>
+              
+              <div className="space-y-5 p-5 bg-gradient-to-br from-white/5 to-white/[0.02] rounded-3xl border-2 border-white/10">
+                <div className="space-y-2">
+                  <span className="text-[9px] font-bold text-white/40 uppercase tracking-wider">Project Name</span>
+                  <input 
+                    className="w-full bg-black/40 border-2 border-white/10 p-3 rounded-xl text-sm text-white font-bold uppercase outline-none focus:border-emerald-500 transition-colors" 
+                    value={projectName} 
+                    onChange={e => setProjectInfo({ projectName: e.target.value })} 
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <span className="text-[9px] font-bold text-white/40 uppercase tracking-wider">Author</span>
+                  <input 
+                    className="w-full bg-black/40 border-2 border-white/10 p-3 rounded-xl text-sm text-white font-bold uppercase outline-none focus:border-indigo-500 transition-colors" 
+                    value={author} 
+                    onChange={e => setProjectInfo({ author: e.target.value })} 
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <span className="text-[9px] font-bold text-white/40 uppercase tracking-wider">Description</span>
+                  <textarea 
+                    className="w-full bg-black/40 border-2 border-white/10 p-3 rounded-xl text-xs text-white/60 outline-none h-24 resize-none focus:border-purple-500 transition-colors" 
+                    value={projectDescription} 
+                    onChange={e => setProjectInfo({ projectDescription: e.target.value })} 
+                  />
+                </div>
+              </div>
+
+              <button 
+                onClick={() => setIsExporting(true)} 
+                className="w-full py-4 bg-gradient-to-r from-blue-500 via-indigo-600 to-purple-600 text-white text-xs font-bold uppercase tracking-widest rounded-2xl shadow-2xl hover:shadow-blue-500/30 transition-all hover:scale-105 flex items-center justify-center gap-2"
+              >
+                <i className="fa-solid fa-cloud-arrow-down"></i> Export Project
+              </button>
             </div>
           )}
         </div>
