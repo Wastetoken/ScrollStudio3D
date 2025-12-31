@@ -78,6 +78,8 @@ Once satisfied, open the **Export Pipeline** (Project Tab). You have two main op
 1.  **Download Project JSON:** Best for existing React/R3F applications.
 2.  **Download Project ZIP:** A complete, self-contained package including `index.html`, `project.json`, and the standalone `ScrollyPipeline.js` engine. 
 
+For detailed instructions on hosting and integration, see the **[Export & Distribution Guide](docs/EXPORT_GUIDE.md)**.
+
 ---
 
 ## Technical Architecture
