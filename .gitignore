@@ -12,6 +12,12 @@ dist
 dist-ssr
 *.local
 
+# Large Binaries
+*.mp4
+*.glb
+*.zip
+*.bin
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
