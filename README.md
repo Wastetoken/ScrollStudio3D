@@ -73,25 +73,66 @@ Go to the **FX Tab** to tune the atmosphere. Increase the **Fog Density** to hid
 ### Step 4: Adding "The Why" (Narrative)
 Use the **Story Tab** to add Narrative Beats. For a car model, you might add a beat at 30% titled "Aerodynamics" and another at 70% titled "Electric Powerhouse." These will fade in gracefully as the user scrolls.
 
-### Step 5: Master Export
-Once satisfied, go to the **Project Tab** and click **Download Project JSON**. This file contains the "brain" of your experience.
+### Step 5: Distribution & Export
+Once satisfied, open the **Export Pipeline** (Project Tab). You have two main options:
+1.  **Download Project JSON:** Best for existing React/R3F applications.
+2.  **Download Project ZIP:** A complete, self-contained package including `index.html`, `project.json`, and the standalone `ScrollyPipeline.js` engine. 
 
 ---
 
 ## Technical Architecture
 
-*   **Engine:** [React Three Fiber](https://r3f.docs.pmnd.rs/) (Three.js abstraction).
-*   **Interpolation:** [GSAP](https://gsap.com/) (GreenSock) for high-precision timeline scrubbing.
+*   **Studio Engine:** [React Three Fiber](https://r3f.docs.pmnd.rs/) (Three.js abstraction).
+*   **Standalone Engine:** Pure Vanilla JavaScript (included in ZIP exports).
+*   **Asset Management:** Automatic GLB normalization and optional Base64 embedding.
 *   **State Management:** [Zustand](https://github.com/pmndrs/zustand) for a high-performance reactive store.
-*   **Optics:** [@react-three/postprocessing](https://github.com/pmndrs/react-postprocessing) for GPU-accelerated shaders.
 
-## Production Deployment
+## Distribution Pipeline
 
-To use your creation in a production website:
-1.  Initialize a standard Three.js/R3F scene.
-2.  Load the `Project JSON` exported from the Studio.
-3.  Feed the keyframe data into a GSAP ScrollTrigger.
-4.  Map the `scrollProgress` to the engine's `seek()` function.
+The project supports two primary ways to go live:
+
+| Feature | Self-Contained ZIP | React Integration |
+| :--- | :--- | :--- |
+| **Tech Stack** | Vanilla JS (Three.js CDN) | React / Three Fiber |
+| **Setup Time** | < 1 Minute | Integration Required |
+| **Build Process** | None (Static HTML) | npm run build |
+| **Best For** | Landing Pages, Marketing | SaaS, Complex Web Apps |
+| **Engine** | `ScrollyPipeline.js` | `ScrollyEngine.tsx` |
+
+### 1. The Self-Contained Package (Vanilla)
+The ZIP export provides a ready-to-use folder. 
+*   **Unzip & Run:** Use any local server (Live Server, Python http.server) to open `index.html`.
+*   **Single File vs Assets:** 
+    *   **Embedded:** All 3D models are baked into `project.json` as Base64 strings. Extreme portability.
+    *   **External:** Models stay as `.glb` files in the `assets/` folder. Better for performance and cache.
+
+### 2. React Integration
+To use your creation in a production React website:
+1.  **Extract Components:** Copy `ScrollyEngine.tsx` and its dependencies (like `cameraUtils.ts`) into your project.
+2.  **Import Data:** Load the `project.json` exported from the Studio.
+3.  **Implement:**
+    ```tsx
+    import { ScrollyEngine } from './components/Studio/ScrollyEngine';
+    import projectData from './project.json';
+
+    export default function Experience() {
+      return (
+        <div style={{ width: '100vw', height: '100vh' }}>
+          <ScrollyEngine data={projectData} />
+        </div>
+      );
+    }
+    ```
+
+---
+
+## FAQ & Troubleshooting
+
+### Why doesn't the ZIP work when I double-click index.html?
+Browsers block loading local files (like `project.json` or `.glb` models) due to **CORS security policies**. You must run the project through a server. The easiest way is `npx serve .` in the unzipped folder.
+
+### Can I change the theme after exporting?
+Yes! You can edit `project.json` directly to change colors, durations, or narrative text. For styling the narrative beats in the Vanilla export, modify the CSS within `index.html`.
 
 ---
 *Built for creators by ScrollStudio Engineering.*

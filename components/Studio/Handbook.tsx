@@ -17,7 +17,7 @@ const TutorialSection: React.FC<{ title: string; children: React.ReactNode; icon
 
 export const Handbook: React.FC = () => {
   const { showHandbook, setShowHandbook } = useStore();
-  const [activeTab, setActiveTab] = useState<'directing' | 'optics' | 'atmosphere' | 'fx'>('directing');
+  const [activeTab, setActiveTab] = useState<'directing' | 'optics' | 'atmosphere' | 'fx' | 'distribution'>('directing');
 
   if (!showHandbook) return null;
 
@@ -55,7 +55,8 @@ export const Handbook: React.FC = () => {
               { id: 'directing', label: 'Directing', icon: 'fa-video', desc: 'Paths & Timeline' },
               { id: 'optics', label: 'Optics', icon: 'fa-circle-dot', desc: 'Lenses & Blur' },
               { id: 'atmosphere', label: 'Atmosphere', icon: 'fa-cloud-sun', desc: 'Light & Space' },
-              { id: 'fx', label: 'Visual FX', icon: 'fa-wand-magic-sparkles', desc: 'The Final Grade' }
+              { id: 'fx', label: 'Visual FX', icon: 'fa-wand-magic-sparkles', desc: 'The Final Grade' },
+              { id: 'distribution', label: 'Distribution', icon: 'fa-box-open', desc: 'Going Live' }
             ].map(tab => (
               <button
                 key={tab.id}
@@ -132,7 +133,21 @@ export const Handbook: React.FC = () => {
                 </TutorialSection>
               </div>
             )}
+            {activeTab === 'distribution' && (
+              <div className="space-y-10">
+                <TutorialSection title="Direct-to-Web (ZIP)" icon="fa-file-zipper">
+                  <p>The <b className="text-white">Self-Contained Export</b> is the fastest way to deploy. It includes a custom vanilla JS engine that doesn't require React.</p>
+                  <ul className="list-disc pl-4 space-y-2">
+                    <li><b className="text-white">Assets Folder:</b> Your 3D models are bundled as separate files or embedded directly in the JSON.</li>
+                    <li><b className="text-white">Local Server:</b> Due to CORS security, you must use a local server (like Live Server or Python) to view the zip contents locally.</li>
+                  </ul>
+                </TutorialSection>
 
+                <TutorialSection title="React Integration" icon="fa-code">
+                  <p>For existing React applications, use the <b className="text-white">JSON Export</b>. Simply feed the data into the <code className="text-emerald-400">ScrollyEngine</code> component.</p>
+                </TutorialSection>
+              </div>
+            )}
           </div>
         </div>
 
