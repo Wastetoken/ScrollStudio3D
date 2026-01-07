@@ -1,0 +1,280 @@
+<html lang="en" class="scroll-smooth">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MONOLITH // NODE - 3D PATHING</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.min.js"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Syncopate:wght@400;700&family=Inter:wght@300;400;600&family=JetBrains+Mono:wght@300&display=swap"
+        rel="stylesheet">
+    <style>
+        body {
+            background-color: #050505;
+            color: #fff;
+            font-family: 'Inter', sans-serif;
+            overflow-x: hidden;
+        }
+
+        .font-sync {
+            font-family: 'Syncopate', sans-serif;
+        }
+
+        .font-mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            outline: none;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        .hud-border {
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.02);
+            backdrop-filter: blur(10px);
+        }
+
+        .marker-point {
+            width: 12px;
+            height: 12px;
+            border: 1px solid #fff;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .marker-point::after {
+            content: '';
+            width: 4px;
+            height: 4px;
+            background: #fff;
+            border-radius: 50%;
+        }
+
+        .line-glow {
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.3);
+        }
+
+        .custom-cursor {
+            width: 20px;
+            height: 20px;
+            border: 1px solid white;
+            border-radius: 50%;
+            position: fixed;
+            pointer-events: none;
+            z-index: 9999;
+            transition: transform 0.1s ease;
+            mix-blend-mode: difference;
+        }
+
+        .section-trigger {
+            height: 100vh;
+            pointer-events: none;
+        }
+
+        .path-progress {
+            width: 2px;
+            height: 0%;
+            background: white;
+            position: fixed;
+            right: 40px;
+            top: 50%;
+            transform: translateY(-50%);
+            transition: height 0.1s ease;
+        }
+    </style>
+</head>
+
+<body class="antialiased">
+    <div class="custom-cursor" id="cursor"></div>
+
+    <nav class="fixed top-0 w-full p-8 flex justify-between items-start z-50 mix-blend-difference">
+        <div class="flex flex-col">
+            <span class="font-sync text-xl tracking-[0.4em] font-bold">MONOLITH</span>
+            <span class="font-mono text-[10px] tracking-widest opacity-60">SYSTEM.NODE_049</span>
+        </div>
+        <div class="flex gap-12 text-[10px] font-mono tracking-widest uppercase">
+            <a href="#" class="hover:opacity-50 transition-opacity">Protocol</a>
+            <a href="#" class="hover:opacity-50 transition-opacity">Rail Engine</a>
+            <a href="#" class="hover:opacity-50 transition-opacity">Interface</a>
+        </div>
+    </nav>
+
+    <div class="fixed bottom-10 left-10 z-50 flex flex-col gap-4 font-mono text-[10px]">
+        <div class="hud-border p-4 flex flex-col gap-2">
+            <div class="flex justify-between gap-20"><span>COORDINATES:</span><span id="coord-x">0.000</span></div>
+            <div class="flex justify-between gap-20"><span>ELEVATION:</span><span id="coord-y">0.000</span></div>
+            <div class="flex justify-between gap-20"><span>VELOCITY:</span><span id="coord-v">0.00</span></div>
+        </div>
+        <div class="flex items-center gap-4">
+            <div class="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+            <span class="tracking-[0.2em] opacity-80 uppercase">Node Link Established</span>
+        </div>
+    </div>
+
+    <div class="path-progress" id="progress-bar"></div>
+
+    <main class="relative z-10">
+        <section class="h-screen flex items-center px-12 md:px-24">
+            <div class="max-w-4xl">
+                <h2 class="font-mono text-sm tracking-widest mb-6 opacity-60">INITIALIZING SEQUENCE_</h2>
+                <h1 class="font-sync text-6xl md:text-8xl leading-none tracking-tighter mb-8">
+                    ABSTRACT<br>GEOMETRY
+                </h1>
+                <p class="font-mono text-xs uppercase tracking-widest opacity-40 max-w-sm leading-loose">
+                    Deploying marker-based camera rails for seamless node navigation. Scroll to traverse the dimensional
+                    path.
+                </p>
+            </div>
+        </section>
+
+        <section class="section-trigger" id="s2"></section>
+        <section class="section-trigger" id="s3"></section>
+        <section class="section-trigger" id="s4"></section>
+
+        <section class="h-screen flex flex-col justify-end items-end p-24">
+            <div class="hud-border p-12 max-w-md text-right">
+                <h3 class="font-sync text-2xl mb-4">NODE REACHED</h3>
+                <p class="font-mono text-[10px] opacity-60 leading-relaxed uppercase">
+                    Pathing algorithm complete. Camera rail has successfully interpolated through all 5 primary markers.
+                </p>
+                <button
+                    class="mt-8 border border-white/20 px-8 py-3 font-mono text-[10px] hover:bg-white hover:text-black transition-all duration-500 uppercase tracking-widest">Reset
+                    Sequence</button>
+            </div>
+        </section>
+    </main>
+
+    <canvas id="canvas"></canvas>
+
+    <script>
+        gsap.registerPlugin(ScrollTrigger);
+
+        const cursor = document.getElementById('cursor');
+        document.addEventListener('mousemove', (e) => {
+            gsap.to(cursor, { x: e.clientX - 10, y: e.clientY - 10, duration: 0.2 });
+        });
+
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('canvas'), antialias: true, alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.2);
+        scene.add(ambientLight);
+        const pointLight = new THREE.PointLight(0xffffff, 1);
+        pointLight.position.set(5, 5, 5);
+        scene.add(pointLight);
+
+        const points = [
+            new THREE.Vector3(-10, 0, 10),
+            new THREE.Vector3(-5, 5, 5),
+            new THREE.Vector3(0, 0, 0),
+            new THREE.Vector3(5, -5, -5),
+            new THREE.Vector3(10, 2, -10),
+            new THREE.Vector3(15, 0, -5)
+        ];
+
+        const curve = new THREE.CatmullRomCurve3(points);
+        const curvePoints = curve.getPoints(100);
+        const curveGeometry = new THREE.BufferGeometry().setFromPoints(curvePoints);
+        const curveMaterial = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.2 });
+        const curveLine = new THREE.Line(curveGeometry, curveMaterial);
+        scene.add(curveLine);
+
+        const markerGeometry = new THREE.SphereGeometry(0.1, 16, 16);
+        const markerMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
+        points.forEach(p => {
+            const marker = new THREE.Mesh(markerGeometry, markerMaterial);
+            marker.position.copy(p);
+            scene.add(marker);
+
+            const ringGeom = new THREE.RingGeometry(0.2, 0.22, 32);
+            const ringMat = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide, transparent: true, opacity: 0.3 });
+            const ring = new THREE.Mesh(ringGeom, ringMat);
+            ring.position.copy(p);
+            ring.lookAt(camera.position);
+            scene.add(ring);
+        });
+
+        const gridHelper = new THREE.GridHelper(100, 50, 0x333333, 0x111111);
+        gridHelper.position.y = -10;
+        scene.add(gridHelper);
+
+        const group = new THREE.Group();
+        const boxGeom = new THREE.BoxGeometry(1, 1, 1);
+        const boxMat = new THREE.MeshPhongMaterial({ color: 0xffffff, wireframe: true });
+        const monolith = new THREE.Mesh(boxGeom, boxMat);
+        monolith.position.set(0, 0, 0);
+        scene.add(monolith);
+
+        let scrollPercent = 0;
+        const coordX = document.getElementById('coord-x');
+        const coordY = document.getElementById('coord-y');
+        const coordV = document.getElementById('coord-v');
+        const progressBar = document.getElementById('progress-bar');
+
+        window.addEventListener('scroll', () => {
+            scrollPercent = window.scrollY / (document.documentElement.scrollHeight - window.innerHeight);
+            progressBar.style.height = (scrollPercent * 100) + '%';
+        });
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            const time = scrollPercent;
+            const targetPos = curve.getPointAt(time);
+            const lookAtPos = curve.getPointAt(Math.min(time + 0.01, 1));
+
+            camera.position.lerp(new THREE.Vector3(targetPos.x, targetPos.y + 1, targetPos.z + 5), 0.1);
+            camera.lookAt(targetPos);
+
+            monolith.rotation.y += 0.01;
+            monolith.rotation.z += 0.005;
+            monolith.position.copy(targetPos);
+
+            coordX.innerText = targetPos.x.toFixed(3);
+            coordY.innerText = targetPos.y.toFixed(3);
+            coordV.innerText = (scrollPercent * 100).toFixed(2);
+
+            renderer.render(scene, camera);
+        }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        gsap.from("h1", {
+            opacity: 0,
+            y: 100,
+            duration: 1.5,
+            ease: "expo.out",
+            delay: 0.5
+        });
+
+        gsap.from(".hud-border", {
+            opacity: 0,
+            x: -50,
+            duration: 1,
+            ease: "power2.out",
+            delay: 1
+        });
+
+        animate();
+    </script>
+</body>
+
+</html>

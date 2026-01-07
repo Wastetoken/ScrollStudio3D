@@ -1,0 +1,629 @@
+<html lang="en" class="antialiased">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SCROLL • STUDIO</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        serif: ['Playfair Display', 'serif'],
+                        sans: ['Manrope', 'sans-serif'],
+                        mono: ['Space Mono', 'monospace'],
+                    },
+                    colors: {
+                        void: '#050505',
+                        magma: '#FF4D00',
+                        bio: '#00F0FF',
+                        cream: '#F5F5F0'
+                    }
+                }
+            }
+        }
+    </script>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;600;800&family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap"
+        rel="stylesheet">
+
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #050505;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #333;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #FF4D00;
+        }
+
+        html,
+        body {
+            width: 100%;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        body {
+            background-color: #050505;
+            color: #F5F5F0;
+            overflow-y: auto;
+            touch-action: pan-y;
+        }
+
+        #canvas-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            z-index: 0;
+            touch-action: none;
+        }
+
+        .section-wrapper {
+            position: relative;
+            z-index: 10;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            pointer-events: none;
+        }
+
+        .content-block {
+            pointer-events: auto;
+        }
+
+        .blend-diff {
+            mix-blend-mode: difference;
+        }
+
+        /* Mobile cursor handling */
+        #cursor {
+            display: none;
+        }
+
+        @media (min-width: 768px) {
+            #cursor {
+                display: block;
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 20px;
+                height: 20px;
+                border: 2px solid white;
+                border-radius: 50%;
+                pointer-events: none;
+                z-index: 9999;
+                transform: translate(-50%, -50%);
+                transition: width 0.3s, height 0.3s, background-color 0.3s;
+                mix-blend-mode: exclusion;
+            }
+
+            #cursor.hovered {
+                width: 80px;
+                height: 80px;
+                background-color: white;
+                border-color: transparent;
+                mix-blend-mode: difference;
+            }
+
+            body {
+                cursor: none;
+            }
+        }
+
+        ::selection {
+            background: #FF4D00;
+            color: #fff;
+        }
+
+        .loader-overlay {
+            position: fixed;
+            inset: 0;
+            background: #000;
+            z-index: 10000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: transform 1s cubic-bezier(0.77, 0, 0.175, 1);
+        }
+
+        /* Mobile text sizes */
+        @media (max-width: 767px) {
+            .hero-title {
+                font-size: 3rem;
+                line-height: 0.9;
+            }
+
+            .section-title {
+                font-size: 2.5rem;
+                line-height: 1;
+            }
+
+            .cta-title {
+                font-size: 3.5rem;
+            }
+        }
+
+        @media (min-width: 768px) {
+            .hero-title {
+                font-size: 8rem;
+                line-height: 0.85;
+            }
+
+            .section-title {
+                font-size: 7rem;
+                line-height: 0.9;
+            }
+
+            .cta-title {
+                font-size: 10rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <a href="index.html"
+        style="position: fixed; top: 20px; left: 20px; z-index: 9999; padding: 10px 20px; background-color: rgba(0,0,0,0.7); color: white; text-decoration: none; border: 1px solid rgba(255,255,255,0.2); border-radius: 30px; font-family: sans-serif; font-size: 14px; backdrop-filter: blur(5px); text-transform: uppercase; letter-spacing: 2px; transition: all 0.3s ease;">
+        &larr; Back
+    </a>
+    <!-- Custom Cursor -->
+    <div id="cursor"></div>
+
+    <!-- Loading Screen -->
+    <div class="loader-overlay" id="loader">
+        <div class="text-center">
+            <h1 class="font-mono text-xs sm:text-sm tracking-widest text-magma animate-pulse">INITIALIZING
+                SCROLLYENGINE...</h1>
+        </div>
+    </div>
+
+    <!-- UI Overlay -->
+    <nav
+        class="fixed top-0 left-0 w-full p-4 sm:p-8 flex justify-between items-start z-50 pointer-events-none mix-blend-difference text-white">
+        <div class="pointer-events-auto cursor-pointer nav-item group">
+            <h1 class="font-mono font-bold text-lg sm:text-2xl tracking-tighter">
+                SCROLL<span class="text-magma">•</span>STUDIO
+            </h1>
+            <div class="h-[1px] w-0 bg-white group-hover:w-full transition-all duration-300"></div>
+        </div>
+
+        <div class="hidden sm:flex flex-col items-end gap-2 font-mono text-xs opacity-70">
+            <span>COORD: <span id="scroll-coord">0.00</span></span>
+            <span>ZOOM: <span id="zoom-level">1.0</span>X</span>
+        </div>
+    </nav>
+
+    <div
+        class="fixed bottom-4 left-4 sm:bottom-8 sm:left-8 z-50 mix-blend-difference text-white font-serif italic text-xs sm:text-sm pointer-events-none">
+        <span class="hidden sm:inline">Drag to rotate object<br>Scroll to travel</span>
+        <span class="sm:hidden">Touch to interact<br>Scroll to explore</span>
+    </div>
+
+    <div class="fixed bottom-4 right-4 sm:bottom-8 sm:right-8 z-50 pointer-events-auto">
+        <button
+            class="nav-item w-12 h-12 sm:w-16 sm:h-16 rounded-full border border-white/20 flex items-center justify-center backdrop-blur-sm hover:scale-110 transition-transform active:scale-95 group bg-black/10">
+            <i class="ph ph-arrow-down text-lg sm:text-xl text-white group-hover:text-magma transition-colors"></i>
+        </button>
+    </div>
+
+    <!-- Progress Bar -->
+    <div class="fixed top-0 left-0 h-1 bg-magma z-50" id="progress-bar" style="width: 0%"></div>
+
+    <!-- 3D Canvas -->
+    <div id="canvas-container"></div>
+
+    <!-- Scroll Content -->
+    <main class="relative z-10">
+        <!-- Section 1: Intro -->
+        <section class="section-wrapper px-4 sm:px-6 md:px-20">
+            <div class="content-block relative max-w-4xl">
+                <span
+                    class="font-mono text-magma text-xs sm:text-sm tracking-[0.2em] sm:tracking-[0.3em] uppercase mb-3 sm:mb-4 block overflow-hidden reveal-text">
+                    Visceral Rendering
+                </span>
+                <h2
+                    class="hero-title font-serif font-italic text-cream mb-4 sm:mb-8 mix-blend-difference reveal-heading">
+                    Transform <br>
+                    <span
+                        class="font-sans font-black not-italic text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-500">Vision</span>
+                    Into <br>
+                    Reality
+                </h2>
+                <p
+                    class="font-sans text-base sm:text-xl md:text-2xl font-light text-white/80 max-w-xl leading-relaxed reveal-text">
+                    Upload any 3D asset and orchestrate a cinematic journey. Command light, texture, and time in a
+                    seamless browser experience.
+                </p>
+            </div>
+        </section>
+
+        <!-- Section 2: Features -->
+        <section class="section-wrapper justify-end px-4 sm:px-6 md:px-20">
+            <div class="content-block relative max-w-3xl text-right">
+                <h2
+                    class="section-title font-sans font-black text-white mb-4 sm:mb-6 mix-blend-difference reveal-heading">
+                    ABSOLUTE <br>
+                    <span class="font-serif italic font-light text-magma">CONTROL.</span>
+                </h2>
+                <div class="flex flex-col items-end gap-4 sm:gap-6">
+                    <p class="font-mono text-sm sm:text-base md:text-lg text-white/70 max-w-md reveal-text">
+                        Set precise trigger points. Manipulate camera vectors. Our physics engine handles the friction
+                        while you design the emotion.
+                    </p>
+                    <div class="flex gap-2 sm:gap-4 flex-wrap justify-end">
+                        <div
+                            class="px-4 py-2 sm:px-6 sm:py-3 border border-white/20 rounded-full font-mono text-xs uppercase hover:bg-white hover:text-black transition-colors nav-item">
+                            WebGL 2.0
+                        </div>
+                        <div
+                            class="px-4 py-2 sm:px-6 sm:py-3 border border-white/20 rounded-full font-mono text-xs uppercase hover:bg-white hover:text-black transition-colors nav-item">
+                            React Fiber
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 3: Detail -->
+        <section class="section-wrapper justify-center px-4 sm:px-6">
+            <div class="content-block text-center relative z-20">
+                <div
+                    class="inline-block px-6 py-2 sm:px-8 border border-magma/50 rounded-full bg-magma/10 backdrop-blur-md mb-6 sm:mb-8 nav-item">
+                    <span class="font-mono text-magma text-xs uppercase tracking-widest">System Architecture</span>
+                </div>
+                <h3
+                    class="text-4xl sm:text-5xl md:text-[6rem] font-serif font-bold text-white mb-3 sm:mb-4 reveal-heading">
+                    No Limits <span class="text-magma">*</span>
+                </h3>
+                <p
+                    class="font-sans text-base sm:text-xl text-white/60 max-w-2xl mx-auto leading-relaxed reveal-text px-4">
+                    Blend HTML layout with Canvas depth. Achieve theoretical infinite scroll with virtualized rendering
+                    pipes.
+                </p>
+            </div>
+        </section>
+
+        <!-- Section 4: Grid Layout -->
+        <section class="section-wrapper px-4 sm:px-6 md:px-20">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-12 sm:gap-20 w-full">
+                <div class="md:hidden h-40"></div>
+                <div></div>
+                <div class="content-block flex flex-col justify-center gap-8 sm:gap-12">
+                    <div class="border-t border-white/20 pt-6 sm:pt-8 reveal-panel">
+                        <h4 class="font-mono text-base sm:text-xl text-magma mb-2">01. IMPORT</h4>
+                        <p class="font-sans text-lg sm:text-2xl font-light text-white">Drag & drop GLB/GLTF files
+                            directly into the viewport.</p>
+                    </div>
+                    <div class="border-t border-white/20 pt-6 sm:pt-8 reveal-panel">
+                        <h4 class="font-mono text-base sm:text-xl text-bio mb-2">02. ANIMATE</h4>
+                        <p class="font-sans text-lg sm:text-2xl font-light text-white">Map scroll velocity to mesh
+                            rotation and material emissivity.</p>
+                    </div>
+                    <div class="border-t border-white/20 pt-6 sm:pt-8 reveal-panel">
+                        <h4 class="font-mono text-base sm:text-xl text-white mb-2">03. DEPLOY</h4>
+                        <p class="font-sans text-lg sm:text-2xl font-light text-white">Export as a standalone optimized
+                            React component.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 5: CTA -->
+        <section class="section-wrapper justify-center items-center h-screen px-4 sm:px-6">
+            <div class="content-block text-center z-20">
+                <h2
+                    class="cta-title font-sans font-black text-white leading-none tracking-tighter mix-blend-difference mb-6 sm:mb-8 reveal-heading">
+                    START <br> NOW
+                </h2>
+                <button
+                    class="nav-item relative overflow-hidden px-8 py-4 sm:px-12 sm:py-6 bg-white text-black font-mono font-bold text-sm sm:text-lg rounded-none group hover:bg-magma hover:text-white transition-colors duration-500">
+                    <span class="relative z-10 flex items-center gap-2">
+                        INIT_PROJECT <i class="ph-bold ph-arrow-right"></i>
+                    </span>
+                    <div
+                        class="absolute inset-0 bg-magma transform translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-in-out">
+                    </div>
+                </button>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        // Device detection
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        const isTouch = 'ontouchstart' in window;
+
+        // Cursor Logic (Desktop only)
+        if (!isMobile && !isTouch) {
+            const cursor = document.getElementById('cursor');
+            const navItems = document.querySelectorAll('.nav-item');
+
+            document.addEventListener('mousemove', (e) => {
+                cursor.style.left = e.clientX + 'px';
+                cursor.style.top = e.clientY + 'px';
+            });
+
+            navItems.forEach(item => {
+                item.addEventListener('mouseenter', () => cursor.classList.add('hovered'));
+                item.addEventListener('mouseleave', () => cursor.classList.remove('hovered'));
+            });
+        }
+
+        // GSAP Animations
+        gsap.registerPlugin(ScrollTrigger);
+
+        const headings = document.querySelectorAll('.reveal-heading');
+        headings.forEach(heading => {
+            gsap.fromTo(heading,
+                { y: 100, opacity: 0, scale: 0.95 },
+                {
+                    y: 0, opacity: 1, scale: 1,
+                    duration: 1.5,
+                    ease: "power4.out",
+                    scrollTrigger: {
+                        trigger: heading,
+                        start: "top 80%",
+                        toggleActions: "play none none reverse"
+                    }
+                }
+            );
+        });
+
+        const texts = document.querySelectorAll('.reveal-text');
+        texts.forEach(text => {
+            gsap.fromTo(text,
+                { y: 50, opacity: 0 },
+                {
+                    y: 0, opacity: 1,
+                    duration: 1.2,
+                    ease: "power2.out",
+                    scrollTrigger: {
+                        trigger: text,
+                        start: "top 85%",
+                    }
+                }
+            );
+        });
+
+        const panels = document.querySelectorAll('.reveal-panel');
+        panels.forEach((panel, i) => {
+            gsap.fromTo(panel,
+                { y: 50, opacity: 0 },
+                {
+                    y: 0, opacity: 1,
+                    duration: 1,
+                    delay: i * 0.1,
+                    ease: "power2.out",
+                    scrollTrigger: {
+                        trigger: panel,
+                        start: "top 85%",
+                    }
+                }
+            );
+        });
+
+        // THREE.JS SETUP
+        const container = document.getElementById('canvas-container');
+        const coordSpan = document.getElementById('scroll-coord');
+
+        const scene = new THREE.Scene();
+        scene.fog = new THREE.FogExp2(0x050505, 0.015);
+
+        // Mobile-optimized camera
+        const camera = new THREE.PerspectiveCamera(
+            isMobile ? 60 : 45,
+            window.innerWidth / window.innerHeight,
+            0.1,
+            1000
+        );
+        camera.position.set(0, 0, isMobile ? 18 : 15);
+
+        // Mobile-optimized renderer
+        const renderer = new THREE.WebGLRenderer({
+            antialias: !isMobile,
+            alpha: true,
+            powerPreference: isMobile ? 'low-power' : 'high-performance'
+        });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, isMobile ? 1.5 : 2));
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.2;
+        renderer.shadowMap.enabled = !isMobile;
+        if (!isMobile) {
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        }
+        container.appendChild(renderer.domElement);
+
+        // Simplified geometry for mobile
+        const geometry = new THREE.TorusKnotGeometry(
+            4, 1.2,
+            isMobile ? 100 : 200,
+            isMobile ? 16 : 32,
+            2, 3
+        );
+
+        const material = new THREE.MeshPhysicalMaterial({
+            color: 0xffffff,
+            metalness: 0.9,
+            roughness: 0.1,
+            clearcoat: isMobile ? 0.5 : 1.0,
+            clearcoatRoughness: 0.1,
+            side: THREE.DoubleSide
+        });
+
+        const mesh = new THREE.Mesh(geometry, material);
+        if (!isMobile) {
+            mesh.castShadow = true;
+            mesh.receiveShadow = true;
+        }
+        scene.add(mesh);
+
+        // Simplified lighting for mobile
+        const ambientLight = new THREE.AmbientLight(0xffffff, isMobile ? 0.4 : 0.2);
+        scene.add(ambientLight);
+
+        const spotLight = new THREE.SpotLight(0xffffff, isMobile ? 10 : 20);
+        spotLight.position.set(10, 20, 10);
+        spotLight.angle = 0.5;
+        spotLight.penumbra = 0.5;
+        if (!isMobile) {
+            spotLight.castShadow = true;
+            spotLight.shadow.bias = -0.0001;
+        }
+        scene.add(spotLight);
+
+        const rimLight = new THREE.PointLight(0xFF4D00, isMobile ? 5 : 10, 50);
+        rimLight.position.set(-10, 5, -10);
+        scene.add(rimLight);
+
+        const fillLight = new THREE.PointLight(0x00F0FF, isMobile ? 5 : 10, 50);
+        fillLight.position.set(10, -5, -10);
+        scene.add(fillLight);
+
+        // Interaction
+        let mouseX = 0;
+        let mouseY = 0;
+        let isDragging = false;
+        let dragStartX = 0;
+
+        const windowHalfX = window.innerWidth / 2;
+        const windowHalfY = window.innerHeight / 2;
+
+        // Touch support
+        const onPointerDown = (e) => {
+            isDragging = true;
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            dragStartX = clientX;
+            if (!isMobile) document.body.style.cursor = 'grabbing';
+        };
+
+        const onPointerUp = () => {
+            isDragging = false;
+            if (!isMobile) document.body.style.cursor = 'none';
+        };
+
+        const onPointerMove = (e) => {
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+            mouseX = (clientX - windowHalfX) * 0.001;
+            mouseY = (clientY - windowHalfY) * 0.001;
+
+            if (isDragging) {
+                const deltaX = clientX - dragStartX;
+                mesh.rotation.y += deltaX * 0.005;
+                dragStartX = clientX;
+            }
+        };
+
+        document.addEventListener('mousedown', onPointerDown);
+        document.addEventListener('mouseup', onPointerUp);
+        document.addEventListener('mousemove', onPointerMove);
+        document.addEventListener('touchstart', onPointerDown, { passive: true });
+        document.addEventListener('touchend', onPointerUp);
+        document.addEventListener('touchmove', onPointerMove, { passive: true });
+
+        // Scroll Animation
+        const timeline = gsap.timeline({
+            scrollTrigger: {
+                trigger: "main",
+                start: "top top",
+                end: "bottom bottom",
+                scrub: 1,
+                onUpdate: (self) => {
+                    document.getElementById('progress-bar').style.width = (self.progress * 100) + '%';
+                    if (coordSpan) coordSpan.innerText = self.progress.toFixed(2);
+                }
+            }
+        });
+
+        // Mobile-adjusted animations
+        const posOffset = isMobile ? 2 : 4;
+
+        timeline.to(mesh.rotation, { x: 1, y: 2, duration: 10 }, 0);
+        timeline.to(camera.position, { z: isMobile ? 15 : 12, y: 1, duration: 10 }, 0);
+
+        timeline.to(mesh.position, { x: -posOffset, duration: 10, ease: "power2.inOut" }, 2);
+        timeline.to(mesh.rotation, { x: 2, y: 4, z: 1, duration: 10 }, 2);
+
+        timeline.to(mesh.position, { x: 0, z: 2, duration: 10, ease: "power1.inOut" }, 12);
+        timeline.to(mesh.rotation, { x: 4, y: 6, duration: 10 }, 12);
+        timeline.to(material, { roughness: 0.4, metalness: 0.4, duration: 10 }, 12);
+
+        timeline.to(mesh.position, { x: posOffset, duration: 10 }, 22);
+        timeline.to(mesh.scale, { x: 0.5, y: 0.5, z: 0.5, duration: 10 }, 22);
+
+        timeline.to(mesh.position, { x: 0, y: 0, z: 0, duration: 10 }, 32);
+        timeline.to(mesh.scale, { x: 2, y: 2, z: 2, duration: 10 }, 32);
+        timeline.to(mesh.rotation, { y: 15, duration: 10 }, 32);
+
+        // Render Loop
+        const clock = new THREE.Clock();
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            const t = clock.getElapsedTime();
+
+            if (!isDragging) {
+                mesh.position.y += Math.sin(t) * 0.002;
+                mesh.rotation.z += 0.001;
+            }
+
+            if (!isMobile) {
+                camera.position.x += (mouseX * 2 - camera.position.x) * 0.05;
+                camera.position.y += (-mouseY * 2 - camera.position.y) * 0.05;
+            }
+            camera.lookAt(scene.position);
+
+            renderer.render(scene, camera);
+        }
+
+        // Resize
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // Initialize
+        animate();
+
+        // Remove loader
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                document.getElementById('loader').style.transform = 'translateY(-100%)';
+            }, 800);
+        });
+    </script>
+</body>
+
+</html>

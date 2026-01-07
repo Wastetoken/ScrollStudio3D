@@ -1,0 +1,330 @@
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thermal Vantage | The Predator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/GSAP.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.0.0/model-viewer.min.js"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Syncopate:wght@400;700&family=Inter:wght@300;600;900&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --thermal-red: #ff3c00;
+            --thermal-yellow: #ffcc00;
+            --thermal-blue: #0033ff;
+            --bg-dark: #050705;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: white;
+            font-family: 'Inter', sans-serif;
+            overflow-x: hidden;
+        }
+
+        .syncopate {
+            font-family: 'Syncopate', sans-serif;
+        }
+
+        .thermal-gradient {
+            background: linear-gradient(90deg, #0033ff, #00ff00, #ffff00, #ff3c00);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .scanlines {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            background-size: 100% 4px, 3px 100%;
+            pointer-events: none;
+            z-index: 50;
+            opacity: 0.3;
+        }
+
+        .noise {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url("https://grainy-gradients.vercel.app/noise.svg");
+            opacity: 0.05;
+            pointer-events: none;
+            z-index: 51;
+        }
+
+        .hud-corner {
+            width: 40px;
+            height: 40px;
+            border: 2px solid var(--thermal-red);
+        }
+
+        .hero-title {
+            font-size: clamp(3rem, 10vw, 12rem);
+            line-height: 0.8;
+        }
+
+        .clip-path-oblique {
+            clip-path: polygon(0 0, 100% 0, 90% 100%, 0% 100%);
+        }
+
+        model-viewer {
+            --poster-color: transparent;
+            background-color: transparent;
+        }
+
+        .custom-cursor {
+            width: 20px;
+            height: 20px;
+            border: 1px solid var(--thermal-red);
+            position: fixed;
+            pointer-events: none;
+            z-index: 100;
+            transition: transform 0.1s ease;
+            transform: translate(-50%, -50%);
+        }
+
+        .stagger-text span {
+            display: inline-block;
+        }
+    </style>
+</head>
+
+<body class="antialiased">
+    <div class="custom-cursor hidden md:block"></div>
+    <div class="scanlines"></div>
+    <div class="noise"></div>
+
+    <nav class="fixed top-0 w-full z-[60] p-8 flex justify-between items-start mix-blend-difference">
+        <div class="text-xs tracking-[0.4em] uppercase font-bold">Protocol: Yautja Prime</div>
+        <div class="flex flex-col items-end space-y-2">
+            <div class="w-12 h-[1px] bg-white"></div>
+            <div class="w-8 h-[1px] bg-white"></div>
+            <div class="w-12 h-[1px] bg-white"></div>
+        </div>
+    </nav>
+
+    <main>
+        <section class="h-screen relative flex items-center justify-center overflow-hidden">
+            <div class="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1542273917363-3b1817f69a2d?ixlib=rb-4.0.3&auto=format&fit=crop&w=2000&q=80')] bg-cover bg-center opacity-20 scale-110"
+                id="hero-bg"></div>
+            <div class="z-10 text-center px-4">
+                <h2 class="syncopate text-xs tracking-[1em] mb-4 opacity-70 translate-y-10 reveal">THERMAL SPECTRUM</h2>
+                <h1 class="hero-title syncopate font-black tracking-tighter reveal translate-y-20">VANTAGE</h1>
+                <div class="mt-8 flex justify-center items-center gap-4 reveal translate-y-10">
+                    <span class="w-20 h-[1px] bg-red-600"></span>
+                    <p class="text-[10px] tracking-[0.5em] uppercase text-red-500 font-bold">Optical Superiority Engaged
+                    </p>
+                    <span class="w-20 h-[1px] bg-red-600"></span>
+                </div>
+            </div>
+            <div class="absolute bottom-10 left-10 text-[10px] space-y-1 opacity-50 reveal translate-x-[-20px]">
+                <p>LAT: 3.4653° N</p>
+                <p>LONG: 62.2159° W</p>
+                <p>BIOME: AMAZONAS</p>
+            </div>
+            <div class="absolute bottom-10 right-10 flex flex-col items-end opacity-50 reveal translate-x-[20px]">
+                <div class="w-32 h-1 bg-zinc-800 mb-2 overflow-hidden">
+                    <div class="h-full bg-red-600 w-2/3" id="loading-bar"></div>
+                </div>
+                <p class="text-[10px]">THREAT LEVEL: EXTREME</p>
+            </div>
+        </section>
+
+        <section class="min-h-screen relative py-24 flex flex-col items-center justify-center">
+            <div class="absolute inset-0 z-0 flex items-center justify-center opacity-10">
+                <div class="syncopate text-[25vw] font-black pointer-events-none select-none">HUNTER</div>
+            </div>
+
+            <div class="relative w-full max-w-6xl mx-auto px-4 z-10">
+                <div class="grid grid-cols-12 gap-8 items-center">
+                    <div class="col-span-12 lg:col-span-4 order-2 lg:order-1">
+                        <div class="space-y-12">
+                            <div class="reveal-left">
+                                <h3 class="syncopate text-red-500 mb-2">CLOAKING ENGAGED</h3>
+                                <p class="text-sm text-zinc-400 leading-relaxed font-light">Refracting light through a
+                                    high-frequency energy field, making the predator virtually invisible to the naked
+                                    eye.</p>
+                            </div>
+                            <div class="reveal-left">
+                                <h3 class="syncopate text-yellow-500 mb-2">THERMAL SYNC</h3>
+                                <p class="text-sm text-zinc-400 leading-relaxed font-light">Heat signatures processed in
+                                    real-time. Biological life forms highlighted across the infrared spectrum.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-span-12 lg:col-span-4 h-[600px] relative group order-1 lg:order-2">
+                        <div class="absolute -inset-4 border border-red-500/20 rounded-full animate-pulse"></div>
+                        <div class="absolute top-0 left-0 hud-corner border-r-0 border-b-0"></div>
+                        <div class="absolute top-0 right-0 hud-corner border-l-0 border-b-0"></div>
+                        <div class="absolute bottom-0 left-0 hud-corner border-r-0 border-t-0"></div>
+                        <div class="absolute bottom-0 right-0 hud-corner border-l-0 border-t-0"></div>
+
+                        <model-viewer src="https://pub-a56d70d158b1414d83c3856ea210601c.r2.dev/Predator_s.glb"
+                            camera-controls auto-rotate shadow-intensity="1" environment-image="neutral" exposure="1"
+                            min-field-of-view="auto" bounds="tight" class="w-full h-full" ar-status="not-presenting">
+                            <div
+                                class="absolute top-4 left-1/2 -translate-x-1/2 bg-red-600 px-3 py-1 text-[10px] font-bold tracking-widest uppercase">
+                                Target Locked</div>
+                        </model-viewer>
+                    </div>
+
+                    <div class="col-span-12 lg:col-span-4 order-3">
+                        <div class="space-y-12 lg:text-right">
+                            <div class="reveal-right">
+                                <h3 class="syncopate text-blue-500 mb-2">PLASMACASTER</h3>
+                                <p class="text-sm text-zinc-400 leading-relaxed font-light">Long-range energy projectile
+                                    weapon. Automated targeting synced with biometric visor input.</p>
+                            </div>
+                            <div class="reveal-right">
+                                <h3 class="syncopate text-white mb-2">BIOMETRICS</h3>
+                                <div class="flex flex-wrap lg:justify-end gap-2 mt-4">
+                                    <span class="px-2 py-1 border border-zinc-700 text-[10px] uppercase">Heart Rate: 140
+                                        BPM</span>
+                                    <span class="px-2 py-1 border border-zinc-700 text-[10px] uppercase">Temp:
+                                        38.5°C</span>
+                                    <span class="px-2 py-1 border border-zinc-700 text-[10px] uppercase">Adrenaline:
+                                        High</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="h-[60vh] flex items-center justify-center bg-zinc-900/30 overflow-hidden relative">
+            <div class="flex space-x-20 whitespace-nowrap overflow-hidden">
+                <div class="syncopate text-9xl font-black opacity-5 flex gap-20 marquee">
+                    <span>THERMAL VISION</span>
+                    <span>HUNT OR BE HUNTED</span>
+                    <span>THERMAL VISION</span>
+                    <span>HUNT OR BE HUNTED</span>
+                </div>
+            </div>
+            <div class="absolute inset-0 flex items-center justify-center">
+                <button
+                    class="px-12 py-6 bg-red-600 hover:bg-white hover:text-red-600 transition-all duration-500 group overflow-hidden relative">
+                    <span class="relative z-10 syncopate font-bold text-sm tracking-widest">INITIATE
+                        SELF-DESTRUCT</span>
+                    <div
+                        class="absolute inset-0 bg-white translate-y-full group-hover:translate-y-0 transition-transform duration-500">
+                    </div>
+                </button>
+            </div>
+        </section>
+    </main>
+
+    <footer class="p-12 border-t border-zinc-800 flex flex-col md:flex-row justify-between items-center gap-8">
+        <div class="text-[10px] tracking-[0.2em] uppercase text-zinc-500">
+            &copy; 2024 Predator Tactical Interface | All Rights Reserved
+        </div>
+        <div class="flex gap-8">
+            <a href="#" class="text-[10px] tracking-widest uppercase hover:text-red-500 transition-colors">Interface</a>
+            <a href="#" class="text-[10px] tracking-widest uppercase hover:text-red-500 transition-colors">System</a>
+            <a href="#" class="text-[10px] tracking-widest uppercase hover:text-red-500 transition-colors">Logs</a>
+        </div>
+        <div class="syncopate text-xs thermal-gradient font-bold">
+            STATUS: ACTIVE
+        </div>
+    </footer>
+
+    <script>
+        gsap.registerPlugin(ScrollTrigger);
+
+        // Custom Cursor
+        const cursor = document.querySelector('.custom-cursor');
+        document.addEventListener('mousemove', (e) => {
+            gsap.to(cursor, {
+                x: e.clientX,
+                y: e.clientY,
+                duration: 0.1
+            });
+        });
+
+        // Hero Parallax
+        gsap.to("#hero-bg", {
+            yPercent: 20,
+            ease: "none",
+            scrollTrigger: {
+                trigger: "main",
+                start: "top top",
+                end: "bottom top",
+                scrub: true
+            }
+        });
+
+        // Entrance Animations
+        const revealTL = gsap.timeline();
+        revealTL.to(".reveal", {
+            y: 0,
+            opacity: 1,
+            duration: 1.2,
+            stagger: 0.2,
+            ease: "power4.out"
+        });
+
+        // Loading bar animation
+        gsap.from("#loading-bar", {
+            width: "0%",
+            duration: 2,
+            ease: "power2.inOut",
+            repeat: -1,
+            yoyo: true
+        });
+
+        // Section Reveal Animations
+        gsap.utils.toArray('.reveal-left').forEach(elem => {
+            gsap.from(elem, {
+                x: -50,
+                opacity: 0,
+                duration: 1,
+                scrollTrigger: {
+                    trigger: elem,
+                    start: "top 80%",
+                }
+            });
+        });
+
+        gsap.utils.toArray('.reveal-right').forEach(elem => {
+            gsap.from(elem, {
+                x: 50,
+                opacity: 0,
+                duration: 1,
+                scrollTrigger: {
+                    trigger: elem,
+                    start: "top 80%",
+                }
+            });
+        });
+
+        // Marquee Effect
+        gsap.to(".marquee", {
+            xPercent: -50,
+            repeat: -1,
+            duration: 20,
+            ease: "linear"
+        });
+
+        // Hover effect for the model area
+        const modelContainer = document.querySelector('model-viewer');
+        modelContainer.addEventListener('mouseenter', () => {
+            gsap.to(cursor, { scale: 3, borderColor: '#fff', duration: 0.3 });
+        });
+        modelContainer.addEventListener('mouseleave', () => {
+            gsap.to(cursor, { scale: 1, borderColor: '#ff3c00', duration: 0.3 });
+        });
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,116 @@
+:root {
+    --cursor-size: 20px;
+    --accent-glow: 0 0 20px rgba(255, 77, 0, 0.4);
+    --void: #030303;
+    --surface: #0F0F0F;
+    --accent: #FF4D00;
+    --muted: #666666;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-font-smoothing: antialiased; }
+
+body {
+    background: radial-gradient(circle at center, var(--surface) 0%, var(--void) 100%);
+    color: #EAEAEA;
+    overflow-x: hidden;
+    cursor: crosshair;
+    line-height: 1.2;
+    font-family: 'General Sans', sans-serif;
+}
+
+#viewport {
+    width: 100vw; height: 100vh;
+    position: fixed; top: 0; left: 0; z-index: 1;
+    pointer-events: none;
+    background: transparent;
+}
+
+main {
+    position: relative;
+    z-index: 5;
+}
+
+.gs-anim { opacity: 0; transform: translateY(60px); filter: blur(10px); }
+
+#turb-box {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10;
+}
+
+#turb-box svg {
+    max-width: 90vw;
+    height: auto;
+    display: block;
+}
+
+#turb-box svg #img {
+    width: 100%;
+    height: 100%;
+}
+
+.section-h { min-height: 100vh; display: flex; align-items: center; justify-content: center; position: relative; z-index: 5; pointer-events: none; padding: 4rem 0; }
+.outline-text { -webkit-text-stroke: 1px rgba(255,255,255,0.3); -webkit-text-fill-color: transparent; }
+
+.nav-item { position: relative; overflow: hidden; }
+.nav-item::after { content: ''; position: absolute; bottom: -2px; left: 0; width: 100%; height: 1px; background: white; transform: scaleX(0); transform-origin: right; transition: transform 0.4s ease; }
+.nav-item:hover::after { transform: scaleX(1); transform-origin: left; }
+
+/* Edge Light Card Effect */
+.edge-light-card {
+    position: relative;
+    border-radius: 1rem;
+    background: #0F0F0F;
+    overflow: hidden;
+    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.edge-light-card::before {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    background: conic-gradient(
+        from 0deg,
+        transparent 0%,
+        transparent 40%,
+        rgba(255, 255, 255, 0.8) 50%,
+        transparent 60%,
+        transparent 100%
+    );
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    animation: rotate-light 4s linear infinite;
+    z-index: -1;
+}
+
+.edge-light-card:hover::before {
+    opacity: 1;
+}
+
+.edge-light-card:hover {
+    transform: scale(1.02);
+    box-shadow: 0 0 30px rgba(255, 255, 255, 0.1);
+}
+
+.edge-light-card::after {
+    content: '';
+    position: absolute;
+    inset: 1px;
+    background: #0F0F0F;
+    border-radius: calc(1rem - 1px);
+    z-index: 0;
+}
+
+.card-content {
+    position: relative;
+    z-index: 10;
+    width: 100%;
+    height: 100%;
+}
+
+@keyframes rotate-light {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}

@@ -1,0 +1,433 @@
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Swiss Editorial Scrollytelling Experience</title>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&family=Space+Grotesk:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['Space Grotesk', 'monospace'],
+                    },
+                    colors: {
+                        'swiss-white': '#F4F4F4',
+                        'swiss-red': '#FF4F00', // International Orange
+                        'swiss-black': '#111111',
+                    },
+                    spacing: {
+                        '128': '32rem',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- React & Three.js Ecosystem -->
+    <script type="importmap">
+        {
+            "imports": {
+                "react": "https://esm.sh/react@18.2.0",
+                "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
+                "three": "https://esm.sh/three@0.160.0",
+                "@react-three/fiber": "https://esm.sh/@react-three/fiber@8.15.14?external=react,react-dom,three",
+                "@react-three/drei": "https://esm.sh/@react-three/drei@9.96.1?external=react,react-dom,three,@react-three/fiber",
+                "gsap": "https://esm.sh/gsap@3.12.5",
+                "gsap/ScrollTrigger": "https://esm.sh/gsap@3.12.5/ScrollTrigger"
+            }
+        }
+    </script>
+    <script type="module" src="https://esm.sh/run" defer></script>
+    <style>
+        body {
+            margin: 0;
+            background-color: #F4F4F4;
+            overflow-x: hidden;
+        }
+
+        .hairline {
+            border-bottom: 0.5px solid rgba(17, 17, 17, 0.2);
+        }
+
+        .hairline-r {
+            border-right: 0.5px solid rgba(17, 17, 17, 0.2);
+        }
+
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        canvas {
+            touch-action: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel" data-type="module">
+        import React, { useRef, useLayoutEffect, useState, Suspense } from 'react';
+        import { createRoot } from 'react-dom/client';
+        import * as THREE from 'three';
+        import { Canvas, useThree, useFrame } from '@react-three/fiber';
+        import { useGLTF, Environment, ContactShadows, PerspectiveCamera, Float } from '@react-three/drei';
+        import gsap from 'gsap';
+        import { ScrollTrigger } from 'gsap/ScrollTrigger';
+
+        gsap.registerPlugin(ScrollTrigger);
+
+        // --- Configuration & Constants ---
+        const ASSETS = {
+            main: 'https://pub-a56d70d158b1414d83c3856ea210601c.r2.dev/Scrollytelling%202.glb',
+            carbon: 'https://pub-a56d70d158b1414d83c3856ea210601c.r2.dev/CarbonFibre.glb',
+            octa: 'https://pub-a56d70d158b1414d83c3856ea210601c.r2.dev/Octahedron.glb'
+        };
+
+        const THEME = {
+            orange: new THREE.Color('#FF4F00'),
+            black: new THREE.Color('#111111'),
+            white: new THREE.Color('#F4F4F4')
+        };
+
+        // --- 3D Components ---
+
+        /**
+         * The Primary Kinetic Sculpture
+         */
+        const HeroModel = ({ scrollTimeline }) => {
+            const { scene: mainScene } = useGLTF(ASSETS.main);
+            const { scene: carbonScene } = useGLTF(ASSETS.carbon);
+            const modelRef = useRef();
+
+            // Extract material from carbon GLB if available, else create procedural
+            const carbonMaterial = useRef();
+
+            useLayoutEffect(() => {
+                // Attempt to find a usable material in the carbon GLB
+                carbonScene.traverse((child) => {
+                    if (child.isMesh && child.material && !carbonMaterial.current) {
+                        carbonMaterial.current = child.material.clone();
+                        carbonMaterial.current.roughness = 0.8;
+                        carbonMaterial.current.metalness = 0.2;
+                        // Boost normal scale for effect
+                        if (carbonMaterial.current.normalMap) {
+                            carbonMaterial.current.normalScale.set(2, 2);
+                        }
+                    }
+                });
+
+                // Prepare Main Model: Apply Swiss/Carbon aesthetic
+                mainScene.traverse((child) => {
+                    if (child.isMesh) {
+                        child.castShadow = true;
+                        child.receiveShadow = true;
+
+                        // Apply Carbon Texture to specific "facets" (simulated by index or geometry type)
+                        // This creates the "Material Contrast" requested
+                        if (child.geometry.index && child.geometry.index.count % 2 === 0 && carbonMaterial.current) {
+                            child.material = carbonMaterial.current;
+                        } else {
+                            // Sterile White Matte
+                            child.material = new THREE.MeshStandardMaterial({
+                                color: THEME.white,
+                                roughness: 0.1,
+                                metalness: 0.1,
+                            });
+                        }
+                    }
+                });
+            }, [mainScene, carbonScene]);
+
+            useLayoutEffect(() => {
+                if (!modelRef.current) return;
+
+                const tl = gsap.timeline({
+                    scrollTrigger: {
+                        trigger: "#scroll-container",
+                        start: "top top",
+                        end: "bottom bottom",
+                        scrub: 1, // Smooth scrubbing
+                    }
+                });
+
+                // SCENE 1 -> 2: Rotate to Side (Orthogonal snap)
+                tl.to(modelRef.current.rotation, {
+                    y: Math.PI / 2,
+                    duration: 1,
+                    ease: "power2.inOut"
+                }, 0);
+
+                // SCENE 2 -> 3: Rotate X (Top View abstract)
+                tl.to(modelRef.current.rotation, {
+                    x: Math.PI / 4,
+                    z: Math.PI / 4,
+                    duration: 1,
+                    ease: "power2.inOut"
+                }, 1);
+
+                // SCENE 3 -> 4: Zoom/Scale impact
+                tl.to(modelRef.current.position, {
+                    z: 1,
+                    duration: 1,
+                    ease: "power1.inOut"
+                }, 2);
+
+            }, []);
+
+            return (
+                <group ref={modelRef} scale={[0.8, 0.8, 0.8]}>
+                    <primitive object={mainScene} />
+                </group>
+            );
+        };
+
+        /**
+         * Floating Navigational Anchor (The Octahedron)
+         */
+        const NavAnchor = () => {
+            const { scene } = useGLTF(ASSETS.octa);
+            const ref = useRef();
+
+            useLayoutEffect(() => {
+                scene.traverse((child) => {
+                    if (child.isMesh) {
+                        // International Orange PBR
+                        child.material = new THREE.MeshStandardMaterial({
+                            color: THEME.orange,
+                            emissive: THEME.orange,
+                            emissiveIntensity: 0.5,
+                            roughness: 0.2,
+                            metalness: 0.8
+                        });
+                    }
+                });
+            }, [scene]);
+
+            // Gentle float animation independent of scroll
+            useFrame((state) => {
+                if (ref.current) {
+                    ref.current.rotation.y += 0.005;
+                    ref.current.rotation.z = Math.sin(state.clock.elapsedTime * 0.5) * 0.1;
+                }
+            });
+
+            // Scroll interaction logic specifically for the anchor
+            useLayoutEffect(() => {
+                if (!ref.current) return;
+                const tl = gsap.timeline({
+                    scrollTrigger: {
+                        trigger: "#scroll-container",
+                        start: "top top",
+                        end: "bottom bottom",
+                        scrub: 2,
+                    }
+                });
+
+                // Moves diagonally across the screen as user scrolls
+                tl.to(ref.current.position, {
+                    x: 3,
+                    y: 2,
+                    ease: "none"
+                });
+
+            }, []);
+
+            return (
+                <group ref={ref} position={[-3, -1.5, 2]} scale={[0.3, 0.3, 0.3]}>
+                    <primitive object={scene} />
+                </group>
+            );
+        };
+
+        const Experience = () => {
+            return (
+                <>
+                    <PerspectiveCamera makeDefault position={[0, 0, 8]} fov={35} />
+
+                    {/* Lighting: Sterile Studio */}
+                    <Environment preset="studio" />
+                    <ambientLight intensity={0.5} />
+                    <spotLight position={[10, 10, 10]} angle={0.15} penumbra={1} intensity={1} castShadow />
+                    <directionalLight position={[-5, 5, 5]} intensity={2} color={THEME.white} />
+
+                    <Suspense fallback={null}>
+                        <HeroModel />
+                        <NavAnchor />
+                    </Suspense>
+
+                    <ContactShadows resolution={1024} scale={20} blur={2} opacity={0.25} far={10} color="#000000" />
+                </>
+            );
+        };
+
+        // --- UI Components (The Swiss Grid) ---
+
+        const Section = ({ title, number, children, align = "left" }) => (
+            <section className="h-screen w-full relative flex flex-col justify-between p-6 md:p-12 box-border border-b border-black/10 pointer-events-none">
+                {/* Header Row */}
+                <div className="flex justify-between items-start w-full pointer-events-auto">
+                    <span className="font-mono text-xs md:text-sm tracking-widest uppercase text-swiss-red">
+                        ( {number} ) — {title}
+                    </span>
+                    <div className="w-12 h-12 border border-black/10 rounded-full flex items-center justify-center animate-spin-slow">
+                        <span className="text-[10px]">+</span>
+                    </div>
+                </div>
+
+                {/* Content Grid */}
+                <div className={`grid grid-cols-12 gap-4 w-full h-full content-center`}>
+                    <div className={`col-span-12 md:col-span-5 ${align === 'right' ? 'md:col-start-8' : ''}`}>
+                        {children}
+                    </div>
+                </div>
+
+                {/* Footer Markers */}
+                <div className="absolute bottom-0 left-0 w-full flex justify-between px-12 py-6 border-t border-black/5">
+                    <span className="text-[10px] font-mono opacity-50">FIG. {number}</span>
+                    <span className="text-[10px] font-mono opacity-50">SCROLLYTELLING_MODULE_V2</span>
+                </div>
+            </section>
+        );
+
+        const UIOverlay = () => {
+            return (
+                <div id="scroll-container" className="absolute top-0 left-0 w-full z-10">
+
+                    {/* Intro Section */}
+                    <Section number="01" title="ORTHOGONAL_VIEW">
+                        <h1 className="font-mono font-bold text-6xl md:text-8xl leading-[0.85] tracking-tighter text-swiss-black mb-8 mix-blend-multiply">
+                            SYSTEM <br /> ONE.
+                        </h1>
+                        <p className="font-sans text-sm md:text-base leading-relaxed max-w-sm text-gray-600 border-l border-swiss-red pl-4">
+                            The rigid grid structures of Swiss Design meet the fluidity of WebGL.
+                            We deconstruct the 3D form into pure graphic data.
+                        </p>
+                    </Section>
+
+                    {/* Analysis Section */}
+                    <Section number="02" title="KINETIC_ANCHOR" align="right">
+                        <h2 className="font-mono font-bold text-5xl md:text-7xl leading-none tracking-tighter text-swiss-black mb-6">
+                            AXIAL <br /> ROTATION
+                        </h2>
+                        <div className="bg-white/80 backdrop-blur-sm p-6 border border-black/5">
+                            <p className="font-sans text-sm text-gray-800 mb-4">
+                                Utilizing the <span className="text-swiss-red font-mono">OCTAHEDRON</span> as a spatial reference point.
+                                The camera snaps to precise orthogonal coordinates, flattening the Z-axis.
+                            </p>
+                            <div className="grid grid-cols-2 gap-2 font-mono text-[10px] text-gray-400">
+                                <div>X: 45.00</div>
+                                <div>Y: 90.00</div>
+                                <div>Z: 00.00</div>
+                                <div>SCALE: 1.0</div>
+                            </div>
+                        </div>
+                    </Section>
+
+                    {/* Material Section */}
+                    <Section number="03" title="MATERIAL_CONTRAST">
+                        <div className="space-y-4">
+                            <h2 className="font-mono font-bold text-5xl md:text-7xl leading-none tracking-tighter text-swiss-black">
+                                CARBON <br /> WEAVE
+                            </h2>
+                            <p className="font-sans text-lg leading-snug max-w-md text-gray-900">
+                                Procedural application of Carbon Fibre textures to geometric facets creating high-frequency detail against the sterile void.
+                            </p>
+                            <button className="bg-swiss-black text-white px-8 py-3 font-mono text-xs uppercase tracking-widest hover:bg-swiss-red transition-colors duration-300 pointer-events-auto">
+                                Inspect Geometry
+                            </button>
+                        </div>
+                    </Section>
+
+                    {/* Footer Section */}
+                    <section className="h-[50vh] w-full flex items-center justify-center border-t border-black/10 bg-white">
+                        <div className="text-center">
+                            <p className="font-mono text-swiss-red text-xs mb-4">END_OF_STREAM</p>
+                            <h3 className="font-sans font-medium text-2xl tracking-tight">Digital Boutique Experience</h3>
+                        </div>
+                    </section>
+                </div>
+            );
+        };
+
+        // --- Loading Screen ---
+        const Loader = () => (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#F4F4F4]">
+                <div className="flex flex-col items-center">
+                    <div className="w-64 h-[1px] bg-gray-300 mb-4 overflow-hidden relative">
+                        <div className="absolute top-0 left-0 h-full w-full bg-swiss-red animate-loading-bar origin-left"></div>
+                    </div>
+                    <span className="font-mono text-xs tracking-widest">LOADING ASSETS...</span>
+                </div>
+            </div>
+        );
+
+        // --- Main App ---
+        const App = () => {
+            return (
+                <div className="relative w-full bg-swiss-white">
+                    {/* 3D Canvas Layer */}
+                    <div className="fixed top-0 left-0 w-full h-screen z-0">
+                        <Canvas shadows dpr={[1, 2]} gl={{ antialias: true, toneMapping: THREE.ACESFilmicToneMapping }}>
+                            <Experience />
+                        </Canvas>
+                    </div>
+
+                    {/* HTML Scroll Content */}
+                    <Suspense fallback={<Loader />}>
+                        <UIOverlay />
+                    </Suspense>
+
+                    {/* Fixed Grid Overlay (Aesthetic Only) */}
+                    <div className="fixed inset-0 pointer-events-none z-20 flex justify-between px-6 md:px-12 w-full h-full">
+                        <div className="h-full border-l border-black/5"></div>
+                        <div className="h-full border-l border-black/5 hidden md:block"></div>
+                        <div className="h-full border-l border-black/5"></div>
+                    </div>
+                </div>
+            );
+        };
+
+        // Add custom animation styles
+        const styleSheet = document.createElement("style");
+        styleSheet.innerText = `
+            @keyframes loading-bar {
+                0% { transform: scaleX(0); }
+                100% { transform: scaleX(1); }
+            }
+            .animate-loading-bar {
+                animation: loading-bar 2s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+            }
+            .animate-spin-slow {
+                animation: spin 10s linear infinite;
+            }
+            @keyframes spin {
+                from { transform: rotate(0deg); }
+                to { transform: rotate(360deg); }
+            }
+        `;
+        document.head.appendChild(styleSheet);
+
+        const root = createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+
+</html>

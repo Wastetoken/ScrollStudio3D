@@ -1,0 +1,5 @@
+{
+  "name": "3D Scrollytelling Engine",
+  "description": "A professional-grade builder for creating scroll-driven 3D experiences using GLB models and keyframe-based camera paths.",
+  "requestFramePermissions": []
+}

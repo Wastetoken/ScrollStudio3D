@@ -1,0 +1,772 @@
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Scroll Studio - Camera Rail Tutorial</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0a0a0a;
+      overflow-x: hidden;
+      overflow-y: scroll;
+      width: 100vw;
+      color: #fff;
+    }
+
+    #canvas-container {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+    }
+
+    #scroll-content {
+      position: relative;
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    .story-section {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 40px;
+    }
+
+    .story-card {
+      background: rgba(0, 0, 0, 0.85);
+      border: 2px solid #00ffff;
+      border-radius: 12px;
+      padding: 40px 60px;
+      max-width: 700px;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 0 40px rgba(0, 255, 255, 0.3);
+      pointer-events: auto;
+    }
+
+    .story-card h1 {
+      font-size: 48px;
+      color: #00ffff;
+      text-shadow: 0 0 20px rgba(0, 255, 255, 0.8);
+      margin-bottom: 20px;
+      font-weight: bold;
+    }
+
+    .story-card h2 {
+      font-size: 36px;
+      color: #00ffff;
+      text-shadow: 0 0 15px rgba(0, 255, 255, 0.6);
+      margin-bottom: 20px;
+    }
+
+    .story-card p {
+      font-size: 20px;
+      line-height: 1.8;
+      color: #e0e0e0;
+      margin-bottom: 15px;
+    }
+
+    .story-card .highlight {
+      color: #00ffff;
+      font-weight: bold;
+      text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+    }
+
+    .story-card .instruction {
+      background: rgba(0, 255, 255, 0.1);
+      border-left: 4px solid #00ffff;
+      padding: 15px 20px;
+      margin: 20px 0;
+      font-family: 'Courier New', monospace;
+      font-size: 18px;
+    }
+
+    #controls-info {
+      position: fixed;
+      bottom: 20px;
+      left: 20px;
+      z-index: 10;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      color: #00ffff;
+      text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+      line-height: 1.6;
+      pointer-events: none;
+      user-select: none;
+    }
+
+    #controls-info div {
+      margin-bottom: 4px;
+    }
+
+    #status-message {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 100;
+      font-family: 'Courier New', monospace;
+      font-size: 32px;
+      font-weight: bold;
+      color: #00ffff;
+      text-shadow: 0 0 30px rgba(0, 255, 255, 1);
+      background: rgba(0, 0, 0, 0.9);
+      padding: 30px 60px;
+      border: 3px solid #00ffff;
+      border-radius: 8px;
+      pointer-events: none;
+      user-select: none;
+      display: none;
+    }
+
+    #status-message.show {
+      display: block;
+      animation: fadeInOut 2s ease;
+    }
+
+    @keyframes fadeInOut {
+      0% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.8);
+      }
+
+      20% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+      }
+
+      80% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+      }
+
+      100% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.8);
+      }
+    }
+
+    .scroll-indicator {
+      position: fixed;
+      bottom: 80px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 10;
+      color: #00ffff;
+      font-size: 14px;
+      font-family: 'Courier New', monospace;
+      animation: bounce 2s infinite;
+      pointer-events: none;
+    }
+
+    @keyframes bounce {
+
+      0%,
+      100% {
+        transform: translateX(-50%) translateY(0);
+      }
+
+      50% {
+        transform: translateX(-50%) translateY(-10px);
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div id="canvas-container"></div>
+
+  <div id="scroll-content">
+    <!-- Section 1: Introduction -->
+    <div class="story-section">
+      <div class="story-card">
+        <h1>Welcome to Scroll Studio</h1>
+        <p>This is a <span class="highlight">camera rail system</span> that lets you create cinematic camera movements
+          through 3D space.</p>
+        <p>Scroll down to see how it works and learn how to build your own camera paths.</p>
+        <div class="instruction">
+          👇 Scroll to begin the tutorial
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 2: Finding First Shot -->
+    <div class="story-section">
+      <div class="story-card">
+        <h2>Step 1: Find Your First Shot</h2>
+        <p>The camera is currently moving along a pre-built rail, focusing on the <span class="highlight">green
+            cube</span>.</p>
+        <p>In Scroll Studio, you'd start by moving your camera around the scene to find the perfect initial angle.</p>
+        <div class="instruction">
+          Press <span class="highlight">A</span> to enter Free Roam Mode and explore
+        </div>
+        <p>Use your mouse to look around and find interesting angles of the 3D objects.</p>
+      </div>
+    </div>
+
+    <!-- Section 3: Capturing First Node -->
+    <div class="story-section">
+      <div class="story-card">
+        <h2>Step 2: Capture Your First Node</h2>
+        <p>Once you've found your first shot, you'd hit <span class="highlight">Capture</span>.</p>
+        <p>This places the <span class="highlight">first node</span> - a point that marks where your camera should be
+          and what it's looking at.</p>
+        <p>Notice the small pink/purple spheres along the cyan rail? Those are the captured nodes.</p>
+        <div class="instruction">
+          The camera rail remembers both <span class="highlight">position</span> and <span
+            class="highlight">target</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 4: Creating the Rail -->
+    <div class="story-section">
+      <div class="story-card">
+        <h2>Step 3: Build Your Rail</h2>
+        <p>Watch as the camera smoothly transitions to focus on the <span class="highlight">orange cone</span>.</p>
+        <p>When you capture a second node, Scroll Studio creates a <span class="highlight">rail</span> between them.</p>
+        <p>The camera smoothly interpolates between positions, creating cinematic movement.</p>
+        <div class="instruction">
+          More nodes = Longer, more complex camera movements
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 5: Multiple Nodes -->
+    <div class="story-section">
+      <div class="story-card">
+        <h2>Step 4: Add More Nodes</h2>
+        <p>Now the camera is targeting the <span class="highlight">red sphere</span>.</p>
+        <p>Each time you hit Capture, you extend your camera rail. The more nodes you add, the more intricate your
+          camera path becomes.</p>
+        <p>Each node stores:</p>
+        <p>• Camera position in 3D space</p>
+        <p>• What the camera is looking at</p>
+        <p>• Smooth transitions to the next node</p>
+      </div>
+    </div>
+
+    <!-- Section 6: Focus Targeting -->
+    <div class="story-section">
+      <div class="story-card">
+        <h2>Step 5: Smart Focus Targeting</h2>
+        <p>The camera is now looking at the <span class="highlight">blue torus</span>.</p>
+        <p>The key feature: <span class="highlight">the rail focuses on whatever you're aiming at when you hit
+            Capture</span>.</p>
+        <p>This means each node can target a different object, creating dynamic storytelling through your camera
+          movement.</p>
+        <div class="instruction">
+          Press <span class="highlight">I</span> in Free Roam to edit nodes
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 7: Editing -->
+    <div class="story-section">
+      <div class="story-card">
+        <h2>Step 6: Edit Your Rail</h2>
+        <p>Made a mistake? Want to adjust your path?</p>
+        <p>In Free Roam mode (press <span class="highlight">A</span>), you can enable Edit Mode (press <span
+            class="highlight">I</span>).</p>
+        <p>The nodes turn <span class="highlight">yellow</span>, and you can click and drag them to reshape your camera
+          path in real-time.</p>
+        <div class="instruction">
+          Try it: Press A, then I, then drag the yellow nodes!
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 8: Final -->
+    <div class="story-section">
+      <div class="story-card">
+        <h1>You're Ready!</h1>
+        <p>That's the Scroll Studio workflow:</p>
+        <p>1. <span class="highlight">Move</span> your camera to find a shot</p>
+        <p>2. <span class="highlight">Capture</span> to place a node</p>
+        <p>3. <span class="highlight">Repeat</span> to build your rail</p>
+        <p>4. <span class="highlight">Edit</span> nodes to refine your path</p>
+        <p>5. <span class="highlight">Scroll</span> through your cinematic experience</p>
+        <div class="instruction">
+          Hotkeys in this demo differ from the default Scroll Studio hotkeys.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="scroll-indicator">↓ Scroll Down ↓</div>
+
+  <div id="controls-info">
+    <div>Press A for freeroam</div>
+    <div>Press L to control rail camera while in freeroam</div>
+    <div>Press I to toggle edit mode (drag rail nodes)</div>
+  </div>
+  <div id="status-message"></div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script>
+    const container = document.getElementById('canvas-container');
+    const statusMessage = document.getElementById('status-message');
+
+    let messageTimeout;
+    function showStatus(message) {
+      statusMessage.textContent = message;
+      statusMessage.classList.remove('show');
+      void statusMessage.offsetWidth;
+      statusMessage.classList.add('show');
+
+      clearTimeout(messageTimeout);
+      messageTimeout = setTimeout(() => {
+        statusMessage.classList.remove('show');
+      }, 2000);
+    }
+
+    let scene, camera, renderer;
+    let spline, railCamera, freeRoamCamera, railCameraHelper, railCameraMarker;
+    let splineLine;
+    let targetProgress = 0;
+    let currentProgress = 0;
+    let animating = false;
+    let freeRoam = false;
+    let allowScrollInFreeRoam = false;
+    let mouseDown = false;
+    let lastMouse = { x: 0, y: 0 };
+    let mouseButton = null;
+
+    const euler = new THREE.Euler(0, 0, 0, 'YXZ');
+    const rotateSpeed = 0.005;
+    const panSpeed = 0.05;
+    const zoomSpeed = 0.1;
+
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+    let editModeEnabled = false;
+    let selectedNode = null;
+    let isDraggingNode = false;
+    let dragPlane = new THREE.Plane();
+    let dragIntersection = new THREE.Vector3();
+
+    scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x0a0a0a);
+    scene.fog = new THREE.Fog(0x0a0a0a, 50, 150);
+
+    camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+    railCamera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+
+    railCameraHelper = new THREE.CameraHelper(railCamera);
+    railCameraHelper.visible = false;
+    scene.add(railCameraHelper);
+
+    railCameraMarker = new THREE.Group();
+    const markerGeom = new THREE.ConeGeometry(0.3, 0.8, 8);
+    const markerMat = new THREE.MeshBasicMaterial({ color: 0x00ffff, wireframe: true });
+    const markerMesh = new THREE.Mesh(markerGeom, markerMat);
+    markerMesh.rotation.x = Math.PI / 2;
+    railCameraMarker.add(markerMesh);
+
+    const lineGeom = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(0, 0, 0),
+      new THREE.Vector3(0, 0, -2)
+    ]);
+    const lineMat = new THREE.LineBasicMaterial({ color: 0xff00ff });
+    const directionLine = new THREE.Line(lineGeom, lineMat);
+    railCameraMarker.add(directionLine);
+    railCameraMarker.visible = false;
+    scene.add(railCameraMarker);
+
+    freeRoamCamera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+    freeRoamCamera.position.set(20, 15, 20);
+    freeRoamCamera.lookAt(0, 0, 0);
+
+    renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    container.appendChild(renderer.domElement);
+
+    const splinePoints = [
+      new THREE.Vector3(0, 18, 0),
+      new THREE.Vector3(-5, 15, 8),
+      new THREE.Vector3(-8, 10, 12),
+      new THREE.Vector3(-5, 5, 10),
+      new THREE.Vector3(2, 3, 8),
+      new THREE.Vector3(8, 2.5, 5),
+      new THREE.Vector3(10, 2.5, -2),
+      new THREE.Vector3(8, 3, -8),
+      new THREE.Vector3(2, 4, -10),
+      new THREE.Vector3(-5, 5, -8),
+      new THREE.Vector3(-8, 8, -2)
+    ];
+
+    spline = new THREE.CatmullRomCurve3(splinePoints, false, 'catmullrom', 0.3);
+
+    const splineGeometry = new THREE.BufferGeometry().setFromPoints(spline.getPoints(200));
+    const splineMaterial = new THREE.LineBasicMaterial({
+      color: 0x00ffff,
+      opacity: 0.5,
+      transparent: true,
+      linewidth: 2
+    });
+    splineLine = new THREE.Line(splineGeometry, splineMaterial);
+    scene.add(splineLine);
+
+    const controlPointSpheres = [];
+    splinePoints.forEach((point, index) => {
+      const sphereGeom = new THREE.SphereGeometry(0.15, 12, 12);
+      const sphereMat = new THREE.MeshBasicMaterial({
+        color: 0xff00ff,
+        wireframe: true
+      });
+      const sphere = new THREE.Mesh(sphereGeom, sphereMat);
+      sphere.position.copy(point);
+      sphere.userData = {
+        isControlPoint: true,
+        index: index,
+        originalColor: 0xff00ff
+      };
+      scene.add(sphere);
+      controlPointSpheres.push(sphere);
+    });
+
+    const floor = new THREE.GridHelper(80, 80, 0x444444, 0x222222);
+    floor.position.y = 0;
+    scene.add(floor);
+
+    const cubeGeom = new THREE.BoxGeometry(2, 2, 2);
+    const cubeMat = new THREE.MeshBasicMaterial({ color: 0x00ff00, wireframe: true });
+    const cube = new THREE.Mesh(cubeGeom, cubeMat);
+    cube.position.set(5, 1, 2);
+    scene.add(cube);
+
+    const coneGeom = new THREE.ConeGeometry(1.5, 3, 32);
+    const coneMat = new THREE.MeshBasicMaterial({ color: 0xff8800, wireframe: true });
+    const cone = new THREE.Mesh(coneGeom, coneMat);
+    cone.position.set(0, 1.5, -8);
+    scene.add(cone);
+
+    const sphereGeom = new THREE.SphereGeometry(1.5, 32, 32);
+    const sphereMat = new THREE.MeshBasicMaterial({ color: 0xff0000, wireframe: true });
+    const sphere = new THREE.Mesh(sphereGeom, sphereMat);
+    sphere.position.set(-8, 1.5, 0);
+    scene.add(sphere);
+
+    const torusGeom = new THREE.TorusGeometry(1.5, 0.5, 16, 100);
+    const torusMat = new THREE.MeshBasicMaterial({ color: 0x0088ff, wireframe: true });
+    const torus = new THREE.Mesh(torusGeom, torusMat);
+    torus.position.set(-5, 2, -5);
+    scene.add(torus);
+
+    const targets = [
+      new THREE.Vector3(0, 0, 0),
+      cube.position,
+      cone.position,
+      sphere.position,
+      torus.position
+    ];
+
+    let currentLookAtTarget = new THREE.Vector3();
+    let hasInitializedLookAt = false;
+
+    function updateCamera(prog, lookAtTarget) {
+      const targetCam = freeRoam ? railCamera : camera;
+
+      const position = spline.getPointAt(prog);
+      targetCam.position.copy(position);
+
+      let targetPosition;
+      if (lookAtTarget) {
+        if (!hasInitializedLookAt) {
+          currentLookAtTarget.copy(lookAtTarget);
+          targetCam.lookAt(currentLookAtTarget);
+          hasInitializedLookAt = true;
+          return;
+        }
+        currentLookAtTarget.lerp(lookAtTarget, 0.05);
+        targetPosition = currentLookAtTarget;
+      } else {
+        const tangent = spline.getTangentAt(prog).normalize();
+        const lookAtPoint = position.clone().add(tangent.multiplyScalar(10));
+
+        if (!hasInitializedLookAt) {
+          currentLookAtTarget.copy(lookAtPoint);
+          targetCam.lookAt(currentLookAtTarget);
+          hasInitializedLookAt = true;
+          return;
+        }
+
+        currentLookAtTarget.lerp(lookAtPoint, 0.05);
+        targetPosition = currentLookAtTarget;
+      }
+
+      const currentDirection = new THREE.Vector3();
+      targetCam.getWorldDirection(currentDirection);
+
+      const targetDirection = new THREE.Vector3().subVectors(targetPosition, position).normalize();
+      currentDirection.lerp(targetDirection, 0.08);
+
+      const lookAtFinal = position.clone().add(currentDirection.multiplyScalar(10));
+      targetCam.lookAt(lookAtFinal);
+    }
+
+    function handleScroll() {
+      if (!freeRoam || allowScrollInFreeRoam) {
+        const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
+        const scrollPercentage = window.scrollY / maxScroll;
+        targetProgress = Math.max(0, Math.min(1, scrollPercentage));
+        animating = true;
+      }
+    }
+
+    window.addEventListener('scroll', handleScroll);
+
+    function handleKeyDown(e) {
+      const key = e.key.toLowerCase();
+
+      if (key === 'a') {
+        e.preventDefault();
+        freeRoam = !freeRoam;
+
+        if (freeRoam) {
+          freeRoamCamera.position.copy(railCamera.position);
+
+          const direction = new THREE.Vector3();
+          railCamera.getWorldDirection(direction);
+          euler.y = Math.atan2(direction.x, direction.z);
+          euler.x = Math.asin(-direction.y);
+
+          freeRoamCamera.quaternion.setFromEuler(euler);
+          showStatus('FREE ROAM: ON');
+        } else {
+          allowScrollInFreeRoam = false;
+          editModeEnabled = false;
+          controlPointSpheres.forEach(sphere => {
+            sphere.material.color.setHex(0xff00ff);
+          });
+          showStatus('FREE ROAM: OFF');
+        }
+      }
+
+      if (key === 'i' && freeRoam) {
+        e.preventDefault();
+        editModeEnabled = !editModeEnabled;
+
+        if (editModeEnabled) {
+          showStatus('EDIT MODE: ON');
+          controlPointSpheres.forEach(sphere => {
+            sphere.material.color.setHex(0xffff00);
+          });
+        } else {
+          showStatus('EDIT MODE: OFF');
+          controlPointSpheres.forEach(sphere => {
+            sphere.material.color.setHex(0xff00ff);
+          });
+        }
+      }
+
+      if (key === 'l' && freeRoam) {
+        e.preventDefault();
+        allowScrollInFreeRoam = !allowScrollInFreeRoam;
+        railCameraHelper.visible = allowScrollInFreeRoam;
+        railCameraMarker.visible = allowScrollInFreeRoam;
+
+        if (allowScrollInFreeRoam) {
+          showStatus('RAIL CONTROL: ON');
+        } else {
+          showStatus('RAIL CONTROL: OFF');
+        }
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown);
+
+    function handleMouseDown(e) {
+      if (editModeEnabled && freeRoam) {
+        mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+        mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+
+        raycaster.setFromCamera(mouse, freeRoamCamera);
+        const intersects = raycaster.intersectObjects(controlPointSpheres);
+
+        if (intersects.length > 0) {
+          selectedNode = intersects[0].object;
+          isDraggingNode = true;
+          selectedNode.material.color.setHex(0x00ff00);
+
+          const camDir = new THREE.Vector3();
+          freeRoamCamera.getWorldDirection(camDir);
+          dragPlane.setFromNormalAndCoplanarPoint(camDir, selectedNode.position);
+
+          return;
+        }
+      }
+
+      if (freeRoam) {
+        mouseDown = true;
+        mouseButton = e.button;
+        lastMouse = { x: e.clientX, y: e.clientY };
+      }
+    }
+
+    function handleMouseUp(e) {
+      if (isDraggingNode) {
+        if (selectedNode) {
+          selectedNode.material.color.setHex(editModeEnabled ? 0xffff00 : 0xff00ff);
+        }
+        selectedNode = null;
+        isDraggingNode = false;
+        return;
+      }
+
+      mouseDown = false;
+      mouseButton = null;
+    }
+
+    function handleMouseMove(e) {
+      if (isDraggingNode && selectedNode) {
+        mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+        mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+
+        raycaster.setFromCamera(mouse, freeRoamCamera);
+
+        if (raycaster.ray.intersectPlane(dragPlane, dragIntersection)) {
+          selectedNode.position.copy(dragIntersection);
+          splinePoints[selectedNode.userData.index].copy(dragIntersection);
+
+          spline = new THREE.CatmullRomCurve3(splinePoints, false, 'catmullrom', 0.3);
+
+          const newGeom = new THREE.BufferGeometry().setFromPoints(spline.getPoints(200));
+          splineLine.geometry.dispose();
+          splineLine.geometry = newGeom;
+        }
+        return;
+      }
+
+      if (!freeRoam || !mouseDown) return;
+
+      const deltaX = e.clientX - lastMouse.x;
+      const deltaY = e.clientY - lastMouse.y;
+      lastMouse = { x: e.clientX, y: e.clientY };
+
+      if (mouseButton === 0) {
+        euler.y -= deltaX * rotateSpeed;
+        euler.x -= deltaY * rotateSpeed;
+        euler.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, euler.x));
+        freeRoamCamera.quaternion.setFromEuler(euler);
+      } else if (mouseButton === 2) {
+        const cam = freeRoamCamera;
+        const direction = new THREE.Vector3();
+        cam.getWorldDirection(direction);
+
+        const right = new THREE.Vector3();
+        right.crossVectors(direction, new THREE.Vector3(0, 1, 0)).normalize();
+
+        const up = new THREE.Vector3();
+        up.crossVectors(right, direction).normalize();
+
+        cam.position.addScaledVector(right, -deltaX * panSpeed);
+        cam.position.addScaledVector(up, deltaY * panSpeed);
+      }
+    }
+
+    function handleWheel(e) {
+      e.preventDefault();
+
+      if (freeRoam) {
+        if (allowScrollInFreeRoam) {
+          const delta = e.deltaY > 0 ? 0.01 : -0.01;
+          targetProgress = Math.max(0, Math.min(1, targetProgress + delta));
+          animating = true;
+        } else {
+          const cam = freeRoamCamera;
+          const direction = new THREE.Vector3();
+          cam.getWorldDirection(direction);
+
+          const delta = e.deltaY > 0 ? -1 : 1;
+          cam.position.addScaledVector(direction, delta * zoomSpeed);
+        }
+      } else {
+        const delta = e.deltaY > 0 ? 0.01 : -0.01;
+        targetProgress = Math.max(0, Math.min(1, targetProgress + delta));
+        animating = true;
+      }
+    }
+
+    function handleContextMenu(e) {
+      if (freeRoam) {
+        e.preventDefault();
+      }
+    }
+
+    renderer.domElement.addEventListener('mousedown', handleMouseDown);
+    renderer.domElement.addEventListener('mouseup', handleMouseUp);
+    renderer.domElement.addEventListener('mousemove', handleMouseMove);
+    renderer.domElement.addEventListener('wheel', handleWheel, { passive: false });
+    renderer.domElement.addEventListener('contextmenu', handleContextMenu);
+
+    function animate() {
+      requestAnimationFrame(animate);
+
+      if (animating) {
+        const diff = targetProgress - currentProgress;
+        currentProgress += diff * 0.08;
+
+        if (Math.abs(diff) < 0.0001) {
+          currentProgress = targetProgress;
+          animating = false;
+        }
+      }
+
+      const clampedProgress = Math.max(0, Math.min(1, currentProgress));
+
+      let lookTarget = null;
+      if (clampedProgress < 0.2) {
+        lookTarget = targets[1];
+      } else if (clampedProgress >= 0.2 && clampedProgress < 0.4) {
+        lookTarget = targets[1];
+      } else if (clampedProgress >= 0.4 && clampedProgress < 0.6) {
+        lookTarget = targets[2];
+      } else if (clampedProgress >= 0.6 && clampedProgress < 0.8) {
+        lookTarget = targets[3];
+      } else if (clampedProgress >= 0.8) {
+        lookTarget = targets[4];
+      }
+
+      updateCamera(clampedProgress, lookTarget);
+
+      railCameraMarker.position.copy(railCamera.position);
+      railCameraMarker.quaternion.copy(railCamera.quaternion);
+      railCameraHelper.update();
+
+      cube.rotation.y += 0.005;
+      cone.rotation.y += 0.008;
+      sphere.rotation.x += 0.006;
+      torus.rotation.x += 0.01;
+      torus.rotation.y += 0.005;
+
+      const activeCamera = freeRoam ? freeRoamCamera : camera;
+      renderer.render(scene, activeCamera);
+    }
+
+    animate();
+
+    function handleResize() {
+      const aspect = window.innerWidth / window.innerHeight;
+      camera.aspect = aspect;
+      camera.updateProjectionMatrix();
+      railCamera.aspect = aspect;
+      railCamera.updateProjectionMatrix();
+      freeRoamCamera.aspect = aspect;
+      freeRoamCamera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+
+    window.addEventListener('resize', handleResize);
+  </script>
+</body>
+
+</html>

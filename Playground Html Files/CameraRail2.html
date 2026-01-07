@@ -1,0 +1,505 @@
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spline Camera Rail System</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #0a0a0a;
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        #canvas-container {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+        }
+
+        #controls-info {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            z-index: 10;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            color: #00ffff;
+            text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+            line-height: 1.6;
+            pointer-events: none;
+            user-select: none;
+        }
+
+        #controls-info div {
+            margin-bottom: 4px;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="canvas-container"></div>
+    <div id="controls-info">
+        <div>Press A for freeroam</div>
+        <div>Press L to scroll the camera while in freeroam</div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        const container = document.getElementById('canvas-container');
+
+        let scene, camera, renderer;
+        let spline, railCamera, freeRoamCamera, railCameraHelper, railCameraMarker;
+        let progress = 0;
+        let targetProgress = 0;
+        let currentProgress = 0;
+        let animating = false;
+        let freeRoam = false;
+        let allowScrollInFreeRoam = false;
+        let mouseDown = false;
+        let lastMouse = { x: 0, y: 0 };
+        let mouseButton = null;
+
+        const euler = new THREE.Euler(0, 0, 0, 'YXZ');
+        const rotateSpeed = 0.005;
+        const panSpeed = 0.05;
+        const zoomSpeed = 0.1;
+
+        // Scene setup
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x0a0a0a);
+        scene.fog = new THREE.Fog(0x0a0a0a, 50, 150);
+
+        // Camera setup
+        camera = new THREE.PerspectiveCamera(
+            60,
+            window.innerWidth / window.innerHeight,
+            0.1,
+            1000
+        );
+
+        // Create rail camera (the one that follows the spline)
+        railCamera = new THREE.PerspectiveCamera(
+            60,
+            window.innerWidth / window.innerHeight,
+            0.1,
+            1000
+        );
+
+        // Create visual helper for rail camera
+        railCameraHelper = new THREE.CameraHelper(railCamera);
+        railCameraHelper.visible = false;
+        scene.add(railCameraHelper);
+
+        // Create a mesh to represent the rail camera
+        railCameraMarker = new THREE.Group();
+        const markerGeom = new THREE.ConeGeometry(0.3, 0.8, 8);
+        const markerMat = new THREE.MeshBasicMaterial({ color: 0x00ffff, wireframe: true });
+        const markerMesh = new THREE.Mesh(markerGeom, markerMat);
+        markerMesh.rotation.x = Math.PI / 2;
+        railCameraMarker.add(markerMesh);
+
+        // Add a line showing direction
+        const lineGeom = new THREE.BufferGeometry().setFromPoints([
+            new THREE.Vector3(0, 0, 0),
+            new THREE.Vector3(0, 0, -2)
+        ]);
+        const lineMat = new THREE.LineBasicMaterial({ color: 0xff00ff });
+        const directionLine = new THREE.Line(lineGeom, lineMat);
+        railCameraMarker.add(directionLine);
+
+        railCameraMarker.visible = false;
+        scene.add(railCameraMarker);
+
+        // Create free roam camera
+        freeRoamCamera = new THREE.PerspectiveCamera(
+            60,
+            window.innerWidth / window.innerHeight,
+            0.1,
+            1000
+        );
+        freeRoamCamera.position.set(20, 15, 20);
+        freeRoamCamera.lookAt(0, 0, 0);
+
+        // Renderer setup
+        renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        container.appendChild(renderer.domElement);
+
+        // Create spline path points
+        const splinePoints = [
+            new THREE.Vector3(0, 18, 0),
+            new THREE.Vector3(-5, 15, 8),
+            new THREE.Vector3(-8, 10, 12),
+            new THREE.Vector3(-5, 5, 10),
+            new THREE.Vector3(2, 3, 8),
+            new THREE.Vector3(8, 2.5, 5),
+            new THREE.Vector3(10, 2.5, -2),
+            new THREE.Vector3(8, 3, -8),
+            new THREE.Vector3(2, 4, -10),
+            new THREE.Vector3(-5, 5, -8),
+            new THREE.Vector3(-8, 8, -2)
+        ];
+
+        // Create CatmullRom spline
+        spline = new THREE.CatmullRomCurve3(splinePoints, false, 'catmullrom', 0.3);
+
+        // Visualize spline path
+        const splineGeometry = new THREE.BufferGeometry().setFromPoints(
+            spline.getPoints(200)
+        );
+        const splineMaterial = new THREE.LineBasicMaterial({
+            color: 0x00ffff,
+            opacity: 0.5,
+            transparent: true,
+            linewidth: 2
+        });
+        const splineLine = new THREE.Line(splineGeometry, splineMaterial);
+        scene.add(splineLine);
+
+        // Add helper spheres at control points
+        splinePoints.forEach((point) => {
+            const sphereGeom = new THREE.SphereGeometry(0.15, 12, 12);
+            const sphereMat = new THREE.MeshBasicMaterial({
+                color: 0xff00ff,
+                wireframe: true
+            });
+            const sphere = new THREE.Mesh(sphereGeom, sphereMat);
+            sphere.position.copy(point);
+            scene.add(sphere);
+        });
+
+        // Create scene objects (targets)
+        const floor = new THREE.GridHelper(80, 80, 0x444444, 0x222222);
+        floor.position.y = 0;
+        scene.add(floor);
+
+        // Cube
+        const cubeGeom = new THREE.BoxGeometry(2, 2, 2);
+        const cubeMat = new THREE.MeshBasicMaterial({
+            color: 0x00ff00,
+            wireframe: true
+        });
+        const cube = new THREE.Mesh(cubeGeom, cubeMat);
+        cube.position.set(5, 1, 2);
+        scene.add(cube);
+
+        // Cone
+        const coneGeom = new THREE.ConeGeometry(1.5, 3, 32);
+        const coneMat = new THREE.MeshBasicMaterial({
+            color: 0xff8800,
+            wireframe: true
+        });
+        const cone = new THREE.Mesh(coneGeom, coneMat);
+        cone.position.set(0, 1.5, -8);
+        scene.add(cone);
+
+        // Sphere
+        const sphereGeom = new THREE.SphereGeometry(1.5, 32, 32);
+        const sphereMat = new THREE.MeshBasicMaterial({
+            color: 0xff0000,
+            wireframe: true
+        });
+        const sphere = new THREE.Mesh(sphereGeom, sphereMat);
+        sphere.position.set(-8, 1.5, 0);
+        scene.add(sphere);
+
+        // Torus (additional object)
+        const torusGeom = new THREE.TorusGeometry(1.5, 0.5, 16, 100);
+        const torusMat = new THREE.MeshBasicMaterial({
+            color: 0x0088ff,
+            wireframe: true
+        });
+        const torus = new THREE.Mesh(torusGeom, torusMat);
+        torus.position.set(-5, 2, -5);
+        scene.add(torus);
+
+        // Define target objects for each section
+        const targets = [
+            new THREE.Vector3(0, 0, 0), // floor view
+            cube.position,
+            cone.position,
+            sphere.position,
+            torus.position
+        ];
+
+        // Quaternion for smooth rotation interpolation
+        let currentLookAtTarget = new THREE.Vector3();
+        let hasInitializedLookAt = false;
+
+        // Update camera along spline
+        function updateCamera(prog, lookAtTarget) {
+            const targetCam = freeRoam ? railCamera : camera;
+
+            // Get position on spline
+            const position = spline.getPointAt(prog);
+            targetCam.position.copy(position);
+
+            // Determine what to look at
+            let targetPosition;
+            if (lookAtTarget) {
+                // Initialize look at target on first frame
+                if (!hasInitializedLookAt) {
+                    currentLookAtTarget.copy(lookAtTarget);
+                    targetCam.lookAt(currentLookAtTarget);
+                    hasInitializedLookAt = true;
+                    return;
+                }
+                // Smoothly interpolate the look-at target position
+                currentLookAtTarget.lerp(lookAtTarget, 0.05);
+                targetPosition = currentLookAtTarget;
+            } else {
+                // Get tangent for natural forward direction
+                const tangent = spline.getTangentAt(prog).normalize();
+                const lookAtPoint = position.clone().add(tangent.multiplyScalar(10));
+
+                if (!hasInitializedLookAt) {
+                    currentLookAtTarget.copy(lookAtPoint);
+                    targetCam.lookAt(currentLookAtTarget);
+                    hasInitializedLookAt = true;
+                    return;
+                }
+
+                currentLookAtTarget.lerp(lookAtPoint, 0.05);
+                targetPosition = currentLookAtTarget;
+            }
+
+            // Get current direction
+            const currentDirection = new THREE.Vector3();
+            targetCam.getWorldDirection(currentDirection);
+
+            // Calculate target direction
+            const targetDirection = new THREE.Vector3().subVectors(targetPosition, position).normalize();
+
+            // Smoothly interpolate direction
+            currentDirection.lerp(targetDirection, 0.08);
+
+            // Apply the new direction
+            const lookAtFinal = position.clone().add(currentDirection.multiplyScalar(10));
+            targetCam.lookAt(lookAtFinal);
+        }
+
+        // Handle scroll
+        function handleScroll() {
+            if (!freeRoam || allowScrollInFreeRoam) {
+                // Manual scroll control - map scroll position to spline progress
+                const scrollPercentage = window.scrollY / (document.documentElement.scrollHeight - window.innerHeight);
+                targetProgress = Math.max(0, Math.min(1, scrollPercentage));
+                animating = true;
+            }
+        }
+
+        window.addEventListener('scroll', handleScroll);
+
+        // Handle keyboard
+        function handleKeyDown(e) {
+            const key = e.key.toLowerCase();
+
+            // Toggle free roam mode with 'a'
+            if (key === 'a') {
+                e.preventDefault();
+                freeRoam = !freeRoam;
+
+                if (freeRoam) {
+                    freeRoamCamera.position.copy(railCamera.position);
+
+                    const direction = new THREE.Vector3();
+                    railCamera.getWorldDirection(direction);
+                    euler.y = Math.atan2(direction.x, direction.z);
+                    euler.x = Math.asin(-direction.y);
+
+                    freeRoamCamera.quaternion.setFromEuler(euler);
+
+                    console.log('Free Roam Mode: ON');
+                    console.log('Left Click + Drag: Rotate view');
+                    console.log('Right Click + Drag: Pan/move camera');
+                    console.log('Scroll: Move forward/back (or press L to control rail camera)');
+                    console.log('L: Toggle rail camera control - disables your zoom, enables rail movement');
+                } else {
+                    allowScrollInFreeRoam = false;
+                    console.log('Free Roam Mode: OFF');
+                }
+            }
+
+            // Toggle scroll in free roam with 'l'
+            if (key === 'l' && freeRoam) {
+                e.preventDefault();
+                allowScrollInFreeRoam = !allowScrollInFreeRoam;
+                railCameraHelper.visible = allowScrollInFreeRoam;
+                railCameraMarker.visible = allowScrollInFreeRoam;
+
+                if (allowScrollInFreeRoam) {
+                    console.log('Rail Camera Control: ON - Scroll wheel now controls rail camera movement along path');
+                } else {
+                    console.log('Rail Camera Control: OFF - Scroll wheel controls your zoom');
+                }
+            }
+        }
+
+        window.addEventListener('keydown', handleKeyDown);
+
+        // Mouse controls
+        function handleMouseDown(e) {
+            if (!freeRoam) return;
+
+            mouseDown = true;
+            mouseButton = e.button;
+            lastMouse = { x: e.clientX, y: e.clientY };
+            e.preventDefault();
+        }
+
+        function handleMouseUp(e) {
+            mouseDown = false;
+            mouseButton = null;
+        }
+
+        function handleMouseMove(e) {
+            if (!freeRoam || !mouseDown) return;
+
+            const deltaX = e.clientX - lastMouse.x;
+            const deltaY = e.clientY - lastMouse.y;
+
+            lastMouse = { x: e.clientX, y: e.clientY };
+
+            if (mouseButton === 0) {
+                // Left click - rotate view (orientation)
+                euler.y -= deltaX * rotateSpeed;
+                euler.x -= deltaY * rotateSpeed;
+                euler.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, euler.x));
+
+                freeRoamCamera.quaternion.setFromEuler(euler);
+            } else if (mouseButton === 2) {
+                // Right click - pan camera (movement)
+                const cam = freeRoamCamera;
+                const direction = new THREE.Vector3();
+                cam.getWorldDirection(direction);
+
+                const right = new THREE.Vector3();
+                right.crossVectors(direction, new THREE.Vector3(0, 1, 0)).normalize();
+
+                const up = new THREE.Vector3();
+                up.crossVectors(right, direction).normalize();
+
+                cam.position.addScaledVector(right, -deltaX * panSpeed);
+                cam.position.addScaledVector(up, deltaY * panSpeed);
+            }
+        }
+
+        function handleWheel(e) {
+            e.preventDefault();
+
+            if (freeRoam) {
+                // In free roam mode
+                if (allowScrollInFreeRoam) {
+                    // L is toggled ON - control rail camera along spline
+                    const delta = e.deltaY > 0 ? 0.01 : -0.01;
+                    targetProgress = Math.max(0, Math.min(1, targetProgress + delta));
+                    animating = true;
+                } else {
+                    // L is toggled OFF - normal zoom
+                    const cam = freeRoamCamera;
+                    const direction = new THREE.Vector3();
+                    cam.getWorldDirection(direction);
+
+                    const delta = e.deltaY > 0 ? -1 : 1;
+                    cam.position.addScaledVector(direction, delta * zoomSpeed);
+                }
+            } else {
+                // Not in free roam - scroll moves rail camera along path smoothly
+                const delta = e.deltaY > 0 ? 0.01 : -0.01;
+                targetProgress = Math.max(0, Math.min(1, targetProgress + delta));
+                animating = true;
+            }
+        }
+
+        function handleContextMenu(e) {
+            if (freeRoam) {
+                e.preventDefault();
+            }
+        }
+
+        renderer.domElement.addEventListener('mousedown', handleMouseDown);
+        renderer.domElement.addEventListener('mouseup', handleMouseUp);
+        renderer.domElement.addEventListener('mousemove', handleMouseMove);
+        renderer.domElement.addEventListener('wheel', handleWheel, { passive: false });
+        renderer.domElement.addEventListener('contextmenu', handleContextMenu);
+
+        // Animation loop
+        function animate() {
+            requestAnimationFrame(animate);
+
+            // Smooth progress interpolation
+            if (animating) {
+                const diff = targetProgress - currentProgress;
+                currentProgress += diff * 0.08;
+
+                if (Math.abs(diff) < 0.0001) {
+                    currentProgress = targetProgress;
+                    animating = false;
+                }
+            }
+
+            // Clamp progress
+            const clampedProgress = Math.max(0, Math.min(1, currentProgress));
+
+            // Determine look target based on progress
+            let lookTarget = null;
+            if (clampedProgress < 0.2) {
+                lookTarget = targets[1]; // cube
+            } else if (clampedProgress >= 0.2 && clampedProgress < 0.4) {
+                lookTarget = targets[1]; // cube
+            } else if (clampedProgress >= 0.4 && clampedProgress < 0.6) {
+                lookTarget = targets[2]; // cone
+            } else if (clampedProgress >= 0.6 && clampedProgress < 0.8) {
+                lookTarget = targets[3]; // sphere
+            } else if (clampedProgress >= 0.8) {
+                lookTarget = targets[4]; // torus
+            }
+
+            updateCamera(clampedProgress, lookTarget);
+
+            // Update rail camera marker position and rotation
+            railCameraMarker.position.copy(railCamera.position);
+            railCameraMarker.quaternion.copy(railCamera.quaternion);
+            railCameraHelper.update();
+
+            // Rotate objects
+            cube.rotation.y += 0.005;
+            cone.rotation.y += 0.008;
+            sphere.rotation.x += 0.006;
+            torus.rotation.x += 0.01;
+            torus.rotation.y += 0.005;
+
+            // Render with appropriate camera
+            const activeCamera = freeRoam ? freeRoamCamera : camera;
+            renderer.render(scene, activeCamera);
+        }
+
+        animate();
+
+        // Handle resize
+        function handleResize() {
+            const aspect = window.innerWidth / window.innerHeight;
+            camera.aspect = aspect;
+            camera.updateProjectionMatrix();
+            railCamera.aspect = aspect;
+            railCamera.updateProjectionMatrix();
+            freeRoamCamera.aspect = aspect;
+            freeRoamCamera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        window.addEventListener('resize', handleResize);
+    </script>
+</body>
+
+</html>

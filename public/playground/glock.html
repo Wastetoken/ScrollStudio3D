@@ -1,0 +1,348 @@
+<html lang="en" class="scroll-smooth">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>G19 | MONOCHROME BALLISTICS</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.0.0/model-viewer.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;700;900&family=JetBrains+Mono:wght@400;700&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #050505;
+            --accent-color: #ffffff;
+            --text-muted: #666666;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--accent-color);
+            font-family: 'Inter', sans-serif;
+            overflow-x: hidden;
+        }
+
+        .mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .clip-text {
+            -webkit-background-clip: text;
+            background-clip: text;
+        }
+
+        model-viewer {
+            width: 100%;
+            height: 100vh;
+            background-color: transparent;
+            --poster-color: transparent;
+        }
+
+        .hotspot {
+            background: #fff;
+            border-radius: 50%;
+            border: none;
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.5);
+            height: 12px;
+            width: 12px;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+            position: relative;
+        }
+
+        .hotspot:hover {
+            transform: scale(1.5);
+        }
+
+        .hotspot-annotation {
+            background: rgba(10, 10, 10, 0.85);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-left: 3px solid #fff;
+            padding: 1rem;
+            width: 200px;
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .hotspot[data-active="true"] .hotspot-annotation {
+            opacity: 1;
+        }
+
+        .scrolly-section {
+            height: 100vh;
+            position: relative;
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            pointer-events: none;
+        }
+
+        .content-card {
+            max-width: 450px;
+            padding: 2rem;
+            pointer-events: all;
+        }
+
+        .progress-bar {
+            position: fixed;
+            left: 40px;
+            top: 50%;
+            transform: translateY(-50%);
+            height: 200px;
+            width: 2px;
+            background: rgba(255, 255, 255, 0.1);
+            z-index: 50;
+        }
+
+        .progress-fill {
+            width: 100%;
+            height: 0%;
+            background: #fff;
+        }
+
+        .vignette {
+            position: fixed;
+            inset: 0;
+            background: radial-gradient(circle, transparent 20%, rgba(0, 0, 0, 0.8) 100%);
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        .scanline {
+            width: 100%;
+            height: 1px;
+            background: rgba(255, 255, 255, 0.05);
+            position: fixed;
+            top: 0;
+            z-index: 6;
+            animation: scan 8s linear infinite;
+        }
+
+        @keyframes scan {
+            0% {
+                top: 0;
+            }
+
+            100% {
+                top: 100%;
+            }
+        }
+    </style>
+</head>
+
+<body class="antialiased">
+    <a href="index.html"
+        style="position: fixed; top: 20px; left: 20px; z-index: 9999; padding: 10px 20px; background-color: rgba(0,0,0,0.7); color: white; text-decoration: none; border: 1px solid rgba(255,255,255,0.2); border-radius: 30px; font-family: sans-serif; font-size: 14px; backdrop-filter: blur(5px); text-transform: uppercase; letter-spacing: 2px; transition: all 0.3s ease;">
+        &larr; Back
+    </a>
+
+    <div class="scanline"></div>
+    <div class="vignette"></div>
+
+    <nav class="fixed top-0 w-full p-8 flex justify-between items-center z-[100] mix-blend-difference">
+        <div class="flex items-baseline space-x-2">
+            <span class="text-2xl font-black tracking-tighter">GLOCK 19</span>
+            <span class="mono text-[10px] opacity-50 uppercase tracking-[0.2em]">Gen 4 Series</span>
+        </div>
+        <div class="mono text-[10px] space-x-8 hidden md:flex">
+            <a href="#" class="hover:line-through">SPECIFICATIONS</a>
+            <a href="#" class="hover:line-through">ENGINEERING</a>
+            <a href="#" class="hover:line-through">MANUFACTURING</a>
+        </div>
+        <button
+            class="border border-white/20 px-6 py-2 text-[10px] mono hover:bg-white hover:text-black transition-all">
+            CAD ACCESS
+        </button>
+    </nav>
+
+    <div class="progress-bar">
+        <div class="progress-fill" id="p-fill"></div>
+    </div>
+
+    <div class="fixed inset-0 z-0">
+        <model-viewer id="g19-viewer"
+            src="https://pub-a56d70d158b1414d83c3856ea210601c.r2.dev/uploads_files_6208085_Glock%2B21-S1.glb"
+            camera-controls auto-rotate-delay="0" shadow-intensity="2" environment-image="neutral" exposure="0.8"
+            interaction-prompt="none" camera-orbit="45deg 75deg 2m" min-field-of-view="25deg" bounds="tight">
+
+            <button class="hotspot" slot="hotspot-slide" data-position="0.02m 0.1m 0.05m" data-normal="0 0 1"
+                data-visibility-attribute="visible">
+                <div class="hotspot-annotation">
+                    <h3 class="mono text-xs font-bold mb-1">NITRITE SLIDE</h3>
+                    <p class="text-[10px] text-zinc-400">Tenifer-treated steel for maximum surface hardness and
+                        corrosion resistance.</p>
+                </div>
+            </button>
+
+            <button class="hotspot" slot="hotspot-trigger" data-position="0.02m 0.04m -0.05m" data-normal="0 0 1"
+                data-visibility-attribute="visible">
+                <div class="hotspot-annotation">
+                    <h3 class="mono text-xs font-bold mb-1">SAFE ACTION</h3>
+                    <p class="text-[10px] text-zinc-400">Three independent mechanical safety systems operating
+                        sequentially.</p>
+                </div>
+            </button>
+
+            <button class="hotspot" slot="hotspot-grip" data-position="0.02m -0.08m -0.05m" data-normal="0 0 1"
+                data-visibility-attribute="visible">
+                <div class="hotspot-annotation">
+                    <h3 class="mono text-xs font-bold mb-1">RTF TEXTURE</h3>
+                    <p class="text-[10px] text-zinc-400">Rough Textured Frame designed for optimal friction in adverse
+                        conditions.</p>
+                </div>
+            </button>
+        </model-viewer>
+    </div>
+
+    <main class="relative z-10">
+        <section class="h-screen flex items-center px-12 md:px-24">
+            <div class="max-w-4xl">
+                <h1 class="text-[12vw] leading-[0.85] font-black tracking-tighter uppercase mb-4 opacity-10">PRECISION
+                </h1>
+                <p class="mono text-xs tracking-widest text-zinc-500 max-w-md">
+                    [001] MECHANICAL NARRATIVE <br>
+                    HIGH-FIDELITY BALLISTIC ANALYSIS <br>
+                    VER: 19.4.08
+                </p>
+            </div>
+        </section>
+
+        <section class="scrolly-section px-12 md:px-24" id="step-1">
+            <div class="content-card">
+                <span class="mono text-xs text-zinc-500 mb-4 block underline">01 // TOPOGRAPHY</span>
+                <h2 class="text-5xl font-bold tracking-tighter mb-6 uppercase">SLIDE GEOMETRY</h2>
+                <p class="text-sm text-zinc-400 leading-relaxed mb-6">
+                    The CNC-milled slide undergoes a rigorous nitrocarburizing process. This section highlights the
+                    ejection port tolerances and rear serrations engineered for tactical reliability.
+                </p>
+                <div class="h-[1px] w-24 bg-white/20"></div>
+            </div>
+        </section>
+
+        <section class="scrolly-section flex-row-reverse px-12 md:px-24" id="step-2">
+            <div class="content-card">
+                <span class="mono text-xs text-zinc-500 mb-4 block underline">02 // KINETICS</span>
+                <h2 class="text-5xl font-bold tracking-tighter mb-6 uppercase">TRIGGER SYSTEM</h2>
+                <p class="text-sm text-zinc-400 leading-relaxed mb-6">
+                    The core of the "Safe Action" system. A constant trigger pull from the first to the last round.
+                    Internal safeties ensure discharge only occurs upon deliberate engagement.
+                </p>
+                <div class="flex space-x-4">
+                    <div class="px-3 py-1 border border-white/10 text-[10px] mono">5.5 LBS PULL</div>
+                    <div class="px-3 py-1 border border-white/10 text-[10px] mono">0.4 IN TRAVEL</div>
+                </div>
+            </div>
+        </section>
+
+        <section class="scrolly-section px-12 md:px-24" id="step-3">
+            <div class="content-card">
+                <span class="mono text-xs text-zinc-500 mb-4 block underline">03 // ERGONOMICS</span>
+                <h2 class="text-5xl font-bold tracking-tighter mb-6 uppercase">POLYMER FRAME</h2>
+                <p class="text-sm text-zinc-400 leading-relaxed mb-6">
+                    Proprietary high-strength polymer reduces total mass while absorbing recoil energy. Modular
+                    backstraps allow for user-specific grip geometry optimization.
+                </p>
+                <ul class="text-[10px] mono space-y-2 text-zinc-500">
+                    <li>// IMPACT RESISTANT POLYMER</li>
+                    <li>// INTEGRATED ACCESSORY RAIL</li>
+                    <li>// EXTENDED MAGAZINE RELEASE</li>
+                </ul>
+            </div>
+        </section>
+
+        <section class="h-[80vh] flex flex-col items-center justify-center text-center px-12">
+            <h2 class="text-[8vw] font-black tracking-tighter uppercase mb-8">END OF ANALYSIS</h2>
+            <button class="mono text-xs border border-white px-12 py-4 hover:bg-white hover:text-black transition-all">
+                DOWNLOAD SCHEMATICS
+            </button>
+        </section>
+    </main>
+
+    <footer
+        class="p-12 border-t border-white/5 flex flex-col md:flex-row justify-between items-center opacity-30 mono text-[10px]">
+        <div>SYSTEM DESIGN BY MONOCHROME BALLISTICS © 2024</div>
+        <div class="mt-4 md:mt-0">LAT: 48.3341° N | LONG: 16.5186° E</div>
+    </footer>
+
+    <script>
+        gsap.registerPlugin(ScrollTrigger);
+
+        const viewer = document.querySelector("#g19-viewer");
+        const hotspots = document.querySelectorAll(".hotspot");
+
+        // Set initial state
+        gsap.set(hotspots, { opacity: 0 });
+
+        const tl = gsap.timeline({
+            scrollTrigger: {
+                trigger: "main",
+                start: "top top",
+                end: "bottom bottom",
+                scrub: 1,
+                onUpdate: (self) => {
+                    document.getElementById('p-fill').style.height = `${self.progress * 100}%`;
+                }
+            }
+        });
+
+        // Scrollytelling Timeline
+        tl.to(viewer, {
+            attr: { "camera-orbit": "0deg 85deg 1.5m", "field-of-view": "30deg" },
+            duration: 1
+        })
+            .to(hotspots[0], { opacity: 1, attr: { "data-active": "true" }, duration: 0.2 }, "-=0.2")
+
+            .to(viewer, {
+                attr: { "camera-orbit": "-90deg 90deg 1.8m", "camera-target": "0m 0.05m 0m" },
+                duration: 1
+            })
+            .to(hotspots[0], { opacity: 0, attr: { "data-active": "false" }, duration: 0.2 }, "-=1")
+            .to(hotspots[1], { opacity: 1, attr: { "data-active": "true" }, duration: 0.2 })
+
+            .to(viewer, {
+                attr: { "camera-orbit": "-45deg 100deg 2.2m", "camera-target": "0m -0.05m 0m" },
+                duration: 1
+            })
+            .to(hotspots[1], { opacity: 0, attr: { "data-active": "false" }, duration: 0.2 }, "-=1")
+            .to(hotspots[2], { opacity: 1, attr: { "data-active": "true" }, duration: 0.2 })
+
+            .to(viewer, {
+                attr: { "camera-orbit": "180deg 75deg 3m", "camera-target": "0m 0m 0m" },
+                duration: 1
+            })
+            .to(hotspots[2], { opacity: 0, attr: { "data-active": "false" }, duration: 0.2 }, "-=1");
+
+        // Text reveal animations
+        const sections = document.querySelectorAll('.content-card');
+        sections.forEach(section => {
+            gsap.from(section, {
+                scrollTrigger: {
+                    trigger: section,
+                    start: "top 80%",
+                    end: "bottom 20%",
+                    toggleActions: "play reverse play reverse"
+                },
+                x: -50,
+                opacity: 0,
+                duration: 0.8,
+                ease: "power2.out"
+            });
+        });
+
+        // Smooth reveal for the model on load
+        window.addEventListener('load', () => {
+            gsap.to("body", { opacity: 1, duration: 2 });
+            gsap.from(viewer, { opacity: 0, scale: 0.9, duration: 2.5, ease: "expo.out" });
+        });
+    </script>
+</body>
+
+</html>
