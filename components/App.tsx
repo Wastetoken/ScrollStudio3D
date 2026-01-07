@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, Suspense, useRef } from 'react';
 import { Canvas } from '@react-three/fiber';
+import { Analytics } from '@vercel/analytics/react';
 import { useStore } from '../useStore';
 import { Scene } from './Studio/Scene';
 import { ImprovedSidebar } from './Studio/ImprovedSidebar';
@@ -120,6 +121,7 @@ const App: React.FC = () => {
       <div className="w-full relative">
         <LandingPage />
         <Handbook />
+        <Analytics />
       </div>
     );
   }
@@ -163,6 +165,7 @@ const App: React.FC = () => {
           </div>
         </div>
       )}
+      <Analytics />
     </div>
   );
 };
