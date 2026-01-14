@@ -207,6 +207,50 @@
       background: rgba(0, 255, 255, 0.2);
       box-shadow: 0 0 15px rgba(0, 255, 255, 0.3);
     }
+
+    .mobile-controls {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 1000;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .mobile-btn {
+      background: rgba(0, 255, 255, 0.1);
+      border: 1px solid #00ffff;
+      color: #00ffff;
+      padding: 8px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      backdrop-filter: blur(5px);
+      transition: all 0.3s ease;
+      min-width: 60px;
+      text-align: center;
+    }
+
+    .mobile-btn:hover {
+      background: rgba(0, 255, 255, 0.2);
+      box-shadow: 0 0 15px rgba(0, 255, 255, 0.3);
+    }
+
+    @media (min-width: 768px) {
+      .mobile-controls {
+        display: none;
+      }
+    }
+
+    @media (max-width: 767px) {
+      #controls-info {
+        display: none;
+      }
+    }
   </style>
 </head>
 
@@ -348,6 +392,12 @@
     <div>Press A for freeroam</div>
     <div>Press L to control rail camera while in freeroam</div>
     <div>Press I to toggle edit mode (drag rail nodes)</div>
+  </div>
+  <div class="mobile-controls">
+    <button class="mobile-btn" id="mobile-toggle-ui">Toggle UI (H)</button>
+    <button class="mobile-btn" id="mobile-freeroam">Freeroam (A)</button>
+    <button class="mobile-btn" id="mobile-rail-control">Rail Ctrl (L)</button>
+    <button class="mobile-btn" id="mobile-edit-mode">Edit (I)</button>
   </div>
   <div id="status-message"></div>
 
@@ -645,6 +695,27 @@
     }
 
     window.addEventListener('keydown', handleKeyDown);
+
+    // Mobile button listeners
+    document.getElementById('mobile-toggle-ui').addEventListener('click', () => {
+      const event = { key: 'h', preventDefault: () => {} };
+      handleKeyDown(event);
+    });
+
+    document.getElementById('mobile-freeroam').addEventListener('click', () => {
+      const event = { key: 'a', preventDefault: () => {} };
+      handleKeyDown(event);
+    });
+
+    document.getElementById('mobile-rail-control').addEventListener('click', () => {
+      const event = { key: 'l', preventDefault: () => {} };
+      handleKeyDown(event);
+    });
+
+    document.getElementById('mobile-edit-mode').addEventListener('click', () => {
+      const event = { key: 'i', preventDefault: () => {} };
+      handleKeyDown(event);
+    });
 
     function handleMouseDown(e) {
       if (editModeEnabled && freeRoam) {

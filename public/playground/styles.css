@@ -114,3 +114,19 @@ main {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
 }
+
+/* Mobile optimizations */
+@media (max-width: 768px) {
+    #turb-box svg {
+        max-width: 95vw;
+        height: auto;
+    }
+    
+    .section-h {
+        padding: 2rem 0;
+    }
+    
+    .hero-sub {
+        font-size: 0.75rem;
+    }
+}

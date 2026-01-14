@@ -55,11 +55,12 @@ function PlaygroundGrid() {
       { id: '6', url: 'shapes.html' },
       { id: '7', url: 'camerarail.html' },
       { id: '8', url: 'camerarail2.html' },
-      { id: '9', url: 'about.html' }
+      { id: '9', url: 'about.html' },
+      { id: '10', url: 'guns.html' }
     ];
 
     return (
-      <div className="max-w-7xl mx-auto px-8 py-12 relative z-[100] pointer-events-auto" data-name="playground-grid">
+      <div className="max-w-7xl mx-auto px-4 md:px-8 py-12 relative z-[100] pointer-events-auto" data-name="playground-grid">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-8">
           {examples.map((item, index) => (
             <a

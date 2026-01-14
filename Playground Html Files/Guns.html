@@ -1,0 +1,416 @@
+<html lang="en" class="antialiased has-scroll-init has-scroll-smooth" data-scroll-direction="vertical">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Scroll Studio | KE Arsenal</title>
+  <script src="https://unpkg.com/phosphor-icons"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Syncopate:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/locomotive-scroll@4.1.4/dist/locomotive-scroll.min.css">
+  
+  <style>
+    :root {
+      --accent: #ddca72;
+      --carbon: #fff;
+      --off-white: #284f08;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background-color: var(--off-white);
+      color: var(--carbon);
+      overflow: hidden;
+      font-family: 'Space Grotesk', sans-serif;
+    }
+
+    .has-scroll-smooth {
+      position: fixed;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      left: 0;
+    }
+
+    #webgl-canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 10;
+      pointer-events: none;
+    }
+
+    [data-scroll-container] {
+      position: relative;
+      z-index: 20;
+    }
+
+    .text-outline {
+      -webkit-text-stroke: 1px currentColor;
+      color: transparent;
+    }
+
+    .blend-multiply {
+      mix-blend-mode: multiply;
+    }
+
+    ::-webkit-scrollbar {
+      width: 0px;
+      background: transparent;
+    }
+
+    .cursor-follower {
+      position: fixed;
+      width: 20px;
+      height: 20px;
+      background: var(--accent);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 9999;
+      transform: translate(-50%, -50%);
+      transition: transform 0.2s ease-out;
+      mix-blend-mode: difference;
+    }
+
+    .hud-panel {
+      backdrop-filter: blur(10px) saturate(1.5);
+      -webkit-backdrop-filter: blur(10px) saturate(1.5);
+      background: rgba(255, 255, 255, 0.1);
+      border-left: 2px solid var(--accent);
+      color: var(--carbon);
+    }
+
+    #debug-info {
+      position: fixed;
+      bottom: 1rem;
+      left: 1rem;
+      background: rgba(255,0,0,0.7);
+      color: white;
+      padding: 0.5rem 1rem;
+      font-family: monospace;
+      font-size: 12px;
+      z-index: 10000;
+      max-width: calc(100vw - 2rem);
+      border-radius: 4px;
+    }
+
+    .font-display {
+      font-family: 'Syncopate', sans-serif;
+    }
+
+    .font-sans {
+      font-family: 'Space Grotesk', sans-serif;
+    }
+
+    .font-mono {
+      font-family: monospace;
+    }
+
+    /* Layout utilities */
+    .fixed { position: fixed; }
+    .relative { position: relative; }
+    .absolute { position: absolute; }
+    .flex { display: flex; }
+    .grid { display: grid; }
+    .block { display: block; }
+    .inline-block { display: inline-block; }
+    .hidden { display: none; }
+
+    /* Spacing */
+    .p-4 { padding: 1rem; }
+    .p-6 { padding: 4.5rem; }
+    .p-8 { padding: 2rem; }
+    .px-4 { padding-left: 1rem; padding-right: 1rem; }
+    .py-20 { padding-top: 2rem; padding-bottom: 4rem; }
+    .py-24 { padding-top: 6rem; padding-bottom: 6rem; }
+    .pt-20 { padding-top: 5rem; }
+    .mb-2 { margin-bottom: 0.5rem; }
+    .mb-4 { margin-bottom: 1rem; }
+    .mb-6 { margin-bottom: 1.5rem; }
+    .mb-8 { margin-bottom: 2rem; }
+    .mt-8 { margin-top: 2rem; }
+    .mt-10 { margin-top: 2.5rem; }
+    .mt-20 { margin-top: 5rem; }
+    .ml-auto { margin-left: auto; }
+
+    /* Sizing */
+    .w-2 { width: 0.5rem; }
+    .w-6 { width: 1.5rem; }
+    .w-full { width: 100%; }
+    .h-2 { height: 0.5rem; }
+    .h-6 { height: 1.5rem; }
+    .min-h-screen { min-height: 100vh; }
+    .max-w-md { max-width: 28rem; }
+    .max-w-7xl { max-width: 80rem; }
+
+    /* Colors */
+    .bg-off-white { background-color: var(--off-white); }
+    .bg-carbon { background-color: var(--carbon); }
+    .bg-accent { background-color: var(--accent); }
+    .text-carbon { color: var(--carbon); }
+    .text-off-white { color: var(--off-white); }
+    .text-accent { color: var(--accent); }
+    .text-white { color: white; }
+    .text-red-500 { color: #d93226; }
+    .text-red-700 { color: #d93226; }
+
+    /* Typography */
+    .text-xs { font-size: 0.75rem; }
+    .text-sm { font-size: 0.875rem; }
+    .text-base { font-size: 1rem; }
+    .text-lg { font-size: 1.125rem; }
+    .text-xl { font-size: 1.25rem; }
+    .text-4xl { font-size: 2.25rem; }
+    .text-5xl { font-size: 3rem; }
+    .font-light { font-weight: 300; }
+    .uppercase { text-transform: uppercase; }
+    .tracking-widest { letter-spacing: 0.1em; }
+    .tracking-wider { letter-spacing: 0.05em; }
+    .leading-none { line-height: 1; }
+    .leading-relaxed { line-height: 1.625; }
+    .break-words { word-wrap: break-word; }
+
+    /* Layout */
+    .container { 
+      width: 100%;
+      margin-left: auto;
+      margin-right: auto;
+      padding-left: 1rem;
+      padding-right: 1rem;
+    }
+    .mx-auto { margin-left: auto; margin-right: auto; }
+    .justify-center { justify-content: center; }
+    .justify-between { justify-content: space-between; }
+    .items-center { align-items: center; }
+    .flex-col { flex-direction: column; }
+    .gap-3 { gap: 0.75rem; }
+    .gap-4 { gap: 1rem; }
+    .gap-8 { gap: 2rem; }
+    .gap-10 { gap: 2.5rem; }
+    .space-y-3 > * + * { margin-top: 0.75rem; }
+    .text-center { text-align: center; }
+    .text-right { text-align: right; }
+
+    /* Grid */
+    .grid-cols-1 { grid-template-columns: repeat(1, minmax(0, 1fr)); }
+
+    /* Borders */
+    .border-b { border-bottom-width: 1px; }
+    .border-gray-400 { border-color: #9ca3af; }
+    .border-l-0 { border-left-width: 0; }
+    .border-r-2 { border-right-width: 2px; }
+    .border-accent { border-color: var(--accent); }
+    .pb-1 { padding-bottom: 0.25rem; }
+    .rounded-full { border-radius: 9999px; }
+
+    /* Effects */
+    .animate-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+    .animate-bounce { animation: bounce 1s infinite; }
+    .mix-blend-difference { mix-blend-mode: difference; }
+    .overflow-hidden { overflow: hidden; }
+    .whitespace-nowrap { white-space: nowrap; }
+    .opacity-30 { opacity: 0.3; }
+
+    /* Responsive */
+    @media (min-width: 768px) {
+      .md\\:px-6 { padding-left: 1.5rem; padding-right: 1.5rem; }
+      .md\\:px-12 { padding-left: 3rem; padding-right: 3rem; }
+      .md\\:py-40 { padding-top: 10rem; padding-bottom: 10rem; }
+      .md\\:p-8 { padding: 2rem; }
+      .md\\:text-sm { font-size: 0.875rem; }
+      .md\\:text-xl { font-size: 1.25rem; }
+      .md\\:text-5xl { font-size: 3rem; }
+      .md\\:text-6xl { font-size: 3.75rem; }
+      .md\\:col-span-4 { grid-column: span 4 / span 4; }
+      .md\\:col-start-8 { grid-column-start: 8; }
+      .md\\:col-span-5 { grid-column: span 5 / span 5; }
+      .md\\:grid-cols-12 { grid-template-columns: repeat(12, minmax(0, 1fr)); }
+      .md\\:mt-20 { margin-top: 5rem; }
+    }
+
+    @media (min-width: 1024px) {
+      .lg\\:px-8 { padding-left: 2rem; padding-right: 2rem; }
+      .lg\\:px-20 { padding-left: 5rem; padding-right: 5rem; }
+    }
+
+    /* Custom styles */
+    .h-120vh { height: 120vh; }
+    .text-15vw { font-size: 15vw; }
+    .text-12vw { font-size: 12vw; }
+    .text-10vw { font-size: 10vw; }
+    .text-8vw { font-size: 8vw; }
+    .leading-085 { line-height: 0.85; }
+
+    @media (min-width: 768px) {
+      .text-15vw { font-size: 12vw; }
+      .text-10vw { font-size: 8vw; }
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: .5; }
+    }
+
+    @keyframes bounce {
+      0%, 100% {
+        transform: translateY(-25%);
+        animation-timing-function: cubic-bezier(0.8,0,1,1);
+      }
+      50% {
+        transform: none;
+        animation-timing-function: cubic-bezier(0,0,0.2,1);
+      }
+    }
+
+    .group:hover .group-hover\\:text-accent { color: var(--accent); }
+    .transition-colors { transition-property: color; transition-duration: 300ms; }
+    .duration-300 { transition-duration: 300ms; }
+    .z-10 { z-index: 10; }
+    .z-20 { z-index: 20; }
+    .z-30 { z-index: 30; }
+    .z-50 { z-index: 50; }
+    .z-9999 { z-index: 9999; }
+    .z-10000 { z-index: 10000; }
+    .top-0 { top: 0; }
+    .left-0 { left: 0; }
+    .bottom-4 { bottom: 1rem; }
+    .px-12 { padding-left: 3rem; padding-right: 3rem; }
+    .py-6 { padding-top: 1.5rem; padding-bottom: 1.5rem; }
+  </style>
+</head>
+
+<body class="bg-off-white">
+  <canvas id="webgl-canvas"></canvas>
+  
+  <div id="debug-info-container">
+    <div id="debug-info">Loading assets...</div>
+  </div>
+
+  <header class="fixed top-0 left-0 w-full p-4 md:px-6 lg:px-8 z-50 flex justify-between items-center text-carbon">
+    <h3 class="font-display text-xs md:text-sm tracking-widest uppercase mix-blend-difference text-white">ScrollStudio / Arsenal</h3>
+    <div class="flex items-center gap-3">
+      <div class="w-2 h-2 bg-accent rounded-full animate-pulse"></div>
+      <span class="font-mono text-xs uppercase tracking-widest mix-blend-difference text-white">System Online</span>
+    </div>
+  </header>
+
+  <main data-scroll-container id="main-scroll">
+    <section data-scroll-section class="h-120vh relative flex flex-col justify-center px-4 md:px-12 lg:px-20 pt-20">
+      <div data-scroll data-scroll-speed="-2">
+        <p class="font-mono text-xs md:text-sm uppercase tracking-widest mb-4 text-red-500">Inventory_V.3.0.1</p>
+        <h1 class="font-display text-15vw md:text-12vw leading-085 uppercase break-words mix-blend-difference text-white">
+          Kinetic<br>
+          <span class="text-outline">Arsenal</span>
+        </h1>
+      </div>
+      <div class="mt-20 w-full max-w-md ml-auto" data-scroll data-scroll-speed="1">
+        <p class="text-lg md:text-xl font-sans font-light leading-relaxed">
+          A procedural gallery of high-fidelity weaponry. Built with WebGL viewports and cinematic timeline scrubbing through the Scrolly Engine.
+        </p>
+        <div class="mt-8 flex gap-4 text-sm font-mono uppercase tracking-wider items-center">
+          <svg class="w-6 h-6 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path>
+          </svg>
+          <span>Scroll to Inspect</span>
+        </div>
+      </div>
+    </section>
+
+    <section id="weapon-01" data-scroll-section class="min-h-screen relative flex items-center py-24 px-4 md:px-12 lg:px-20">
+      <div class="w-full max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-12 gap-10">
+        <div class="md:col-span-4 z-20" data-scroll data-scroll-speed="2">
+          <div class="hud-panel p-6 md:p-8">
+            <span class="text-accent font-mono text-xs mb-2 block">ASSET_01</span>
+            <h2 class="text-4xl md:text-5xl font-display uppercase mb-6">MP5</h2>
+            <ul class="font-mono text-sm space-y-3 text-red-700 mb-8">
+              <li class="flex justify-between border-b border-gray-400 pb-1"><span>Caliber</span> <span>9×19mm</span></li>
+              <li class="flex justify-between border-b border-gray-400 pb-1"><span>Effective Range</span> <span>The MP5 is highly effective at close-to-medium ranges.</span></li>
+              <li class="flex justify-between border-b border-gray-400 pb-1"><span>Material</span> <span>The HK MP5 is primarily built from stamped high-strength steel for its receiver and components, combined with durable polymers for grips, forends, and stocks, featuring a cold hammer-forged steel barrel for longevity and accuracy, with some modern variations or aftermarket parts using materials like 6061 aluminum for lighter weight. </span></li>
+            </ul>
+            <p class="text-base md:text-lg leading-relaxed font-light">
+              The MP5 is a German submachine gun developed by Heckler & Koch in the 1960s and is one of the most widely used SMGs in the world, especially among military, police, and special forces units. It is known for its accuracy, reliability, and controllable recoil due to its closed-bolt, roller‑delayed blowback operating system.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="weapon-02" data-scroll-section class="min-h-screen relative flex items-center py-24 px-4 md:px-12 lg:px-20">
+      <div class="w-full max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-12 gap-10">
+        <div class="md:col-start-8 md:col-span-5 z-20" data-scroll data-scroll-speed="3">
+          <div class="hud-panel p-6 md:p-8 border-l-0 border-r-2 border-accent text-right">
+            <span class="text-accent font-mono text-xs mb-2 block">ASSET_02</span>
+            <h2 class="text-4xl md:text-5xl font-display uppercase mb-6">Breaker Shotgun</h2>
+            <ul class="font-mono text-sm space-y-3 text-red-700 mb-8">
+              <li class="flex justify-between border-b border-gray-400 pb-1"><span>12 Gauge</span> <span>Scatter</span></li>
+              <li class="flex justify-between border-b border-gray-400 pb-1"><span>2.4kN</span> <span>Impact</span></li>
+            </ul>
+            <p class="text-base md:text-lg leading-relaxed font-light">
+              Short-barrel ballistic dispersal unit. Designed for close-quarters breach and clear operations.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="weapon-03" data-scroll-section class="min-h-screen relative flex items-center py-24 px-4 md:px-12 lg:px-20">
+      <div class="w-full max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-12 gap-10">
+        <div class="md:col-span-4 z-20" data-scroll data-scroll-speed="1">
+          <div class="hud-panel p-6 md:p-8">
+            <span class="text-accent font-mono text-xs mb-2 block">ASSET_03</span>
+            <h2 class="text-4xl md:text-5xl font-display uppercase mb-6">M14 Rifle</h2>
+            <ul class="font-mono text-sm space-y-3 text-red-700 mb-8">
+              <li class="flex justify-between border-b border-gray-400 pb-1"><span>Origin</span> <span>USA</span></li>
+              <li class="flex justify-between border-b border-gray-400 pb-1"><span>Caliber</span> <span>7.62×51mm</span></li>
+            </ul>
+            <p class="text-base md:text-lg leading-relaxed font-light">
+              An older design, prized for its excellent accuracy and effectiveness at long range, finding new life as a designated marksman rifle.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section data-scroll-section class="py-20 md:py-40 bg-carbon text-off-white relative z-30">
+      <div class="container mx-auto px-4 text-center">
+        <p class="font-mono text-accent mb-4" data-scroll data-scroll-direction="horizontal" data-scroll-speed="-4">/// SYSTEM DIAGNOSTICS</p>
+        <h2 class="text-10vw md:text-8vw leading-none font-display uppercase" data-scroll data-scroll-speed="2">Lethality Confirmed</h2>
+      </div>
+      <div class="overflow-hidden py-10 opacity-30 mt-10 md:mt-20">
+        <div class="whitespace-nowrap flex gap-8 text-4xl md:text-6xl font-display uppercase" data-scroll data-scroll-direction="horizontal" data-scroll-speed="6">
+          <span>Target Acquired</span><span class="text-accent"> // </span>
+          <span>System Locked</span><span class="text-accent"> // </span>
+          <span>Fire at Will</span><span class="text-accent"> // </span>
+          <span>Target Acquired</span><span class="text-accent"> // </span>
+          <span>System Locked</span>
+        </div>
+      </div>
+    </section>
+
+    <footer data-scroll-section class="min-h-screen flex flex-col justify-center items-center bg-off-white text-carbon relative z-30">
+      <div class="relative z-10 text-center">
+        <p class="mb-8 font-mono uppercase text-sm">Deployment Ready</p>
+        <a href="#" class="group relative inline-block px-12 py-6 bg-carbon text-off-white overflow-hidden font-display uppercase text-lg tracking-widest transition-colors duration-300">
+          <span class="relative z-10">Back to Hub</span>
+        </a>
+      </div>
+      <div class="absolute bottom-4 left-0 w-full flex justify-between px-4 md:px-6 text-xs text-red-500 uppercase">
+        <span>SCROLLSTUDIO 2025</span>
+        <span>WebGL / Three.js / Scrolly Engine</span>
+      </div>
+    </footer>
+  </main>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/locomotive-scroll@4.1.4/dist/locomotive-scroll.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+  <script src="guns-app.js" defer></script>
+</body>
+</html>
